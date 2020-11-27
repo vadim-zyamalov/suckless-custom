@@ -1,6 +1,6 @@
 # My custom xbps repository for patched suckless tools
 
-This is my self-made xbps repo of my builds of some sukless tools ([suckless.org](https://suckelss.org)).
+This is my self-made xbps repo of my builds of some suckless tools ([suckless.org](https://suckelss.org)).
 
 The main purpose was to have an ability to install custom `dmenu` replacing standard repo version.
 
