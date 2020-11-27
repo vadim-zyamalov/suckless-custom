@@ -1,0 +1,27 @@
+# Template file for 'dwm'
+pkgname=dwm
+version=6.2
+revision=2
+build_style=gnu-makefile
+make_use_env=compliant
+makedepends="libX11-devel libXinerama-devel libXft-devel freetype-devel"
+short_desc="Dynamic window manager for X"
+maintainer="Vadim Zyamalov <vadim.zyamalov@gmail.com>"
+license="MIT"
+homepage="http://dwm.suckless.org"
+distfiles="https://dl.suckless.org/dwm/dwm-${version}.tar.gz"
+checksum=97902e2e007aaeaa3c6e3bed1f81785b817b7413947f1db1d3b62b8da4cd110e
+
+do_patch() {
+    patch -p1 < ${FILESDIR}/dwm-6.2-patches-20201127.diff
+}
+
+post_patch() {
+	[ -e ${FILESDIR}/config.h ] && cp ${FILESDIR}/config.h config.h || echo "No config.h"
+}
+
+post_install() {
+	vinstall README 644 usr/share/doc/$pkgname
+	vinstall ${FILESDIR}/dwm.desktop 644 usr/share/xsessions
+	vlicense LICENSE
+}
