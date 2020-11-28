@@ -1,0 +1,16 @@
+xresources
+swallow
+fancybar
+hide_vacant_tags
+systray
+statuscmd-signal
+tilegap
+center
+nodmenu
+autostart
+restartsig
+rotatestack
+cyclelayouts
+pertag
+dwmsession
+

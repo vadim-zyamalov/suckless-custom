@@ -1,0 +1,846 @@
+diff -ruN a/config.def.h b/config.def.h
+--- a/config.def.h	2019-02-09 14:50:41.000000000 +0300
++++ b/config.def.h	2020-04-25 08:07:55.067076028 +0300
+@@ -82,6 +82,9 @@
+  */
+ unsigned int tabspaces = 8;
+ 
++/* bg opacity */
++float alpha = 0.95;
++
+ /* Terminal colors (16 first used in escape sequence) */
+ static const char *colorname[] = {
+ 	/* 8 normal colors */
+@@ -109,6 +112,7 @@
+ 	/* more colors can be added after 255 to use with DefaultXX */
+ 	"#cccccc",
+ 	"#555555",
++	"black",
+ };
+ 
+ 
+@@ -117,7 +121,7 @@
+  * foreground, background, cursor, reverse cursor
+  */
+ unsigned int defaultfg = 7;
+-unsigned int defaultbg = 0;
++unsigned int defaultbg = 258;
+ static unsigned int defaultcs = 256;
+ static unsigned int defaultrcs = 257;
+ 
+@@ -156,8 +160,14 @@
+  */
+ static MouseShortcut mshortcuts[] = {
+ 	/* button               mask            string */
+-	{ Button4,              XK_ANY_MOD,     "\031" },
+-	{ Button5,              XK_ANY_MOD,     "\005" },
++	{ Button4,              XK_NO_MOD,      "\031" },
++	{ Button5,              XK_NO_MOD,      "\005" },
++};
++
++MouseKey mkeys[] = {
++	/* button               mask            function        argument */
++	{ Button4,              ShiftMask,      kscrollup,      {.i =  1} },
++	{ Button5,              ShiftMask,      kscrolldown,    {.i =  1} },
+ };
+ 
+ /* Internal keyboard shortcuts. */
+@@ -176,8 +186,11 @@
+ 	{ TERMMOD,              XK_C,           clipcopy,       {.i =  0} },
+ 	{ TERMMOD,              XK_V,           clippaste,      {.i =  0} },
+ 	{ TERMMOD,              XK_Y,           selpaste,       {.i =  0} },
++	{ ShiftMask,            XK_Page_Up,     kscrollup,      {.i = -1} },
++	{ ShiftMask,            XK_Page_Down,   kscrolldown,    {.i = -1} },
+ 	{ ShiftMask,            XK_Insert,      selpaste,       {.i =  0} },
+ 	{ TERMMOD,              XK_Num_Lock,    numlock,        {.i =  0} },
++	{ TERMMOD,              XK_Return,      newterm,        {.i =  0} },
+ };
+ 
+ /*
+diff -ruN a/config.mk b/config.mk
+--- a/config.mk	2019-02-09 14:50:41.000000000 +0300
++++ b/config.mk	2020-04-25 08:07:34.434075182 +0300
+@@ -16,7 +16,7 @@
+ INCS = -I$(X11INC) \
+        `$(PKG_CONFIG) --cflags fontconfig` \
+        `$(PKG_CONFIG) --cflags freetype2`
+-LIBS = -L$(X11LIB) -lm -lrt -lX11 -lutil -lXft \
++LIBS = -L$(X11LIB) -lm -lrt -lX11 -lutil -lXft -lXrender\
+        `$(PKG_CONFIG) --libs fontconfig` \
+        `$(PKG_CONFIG) --libs freetype2`
+ 
+diff -ruN a/Makefile b/Makefile
+--- a/Makefile	2019-02-09 14:50:41.000000000 +0300
++++ b/Makefile	2020-04-25 08:07:34.435075182 +0300
+@@ -48,10 +48,14 @@
+ 	sed "s/VERSION/$(VERSION)/g" < st.1 > $(DESTDIR)$(MANPREFIX)/man1/st.1
+ 	chmod 644 $(DESTDIR)$(MANPREFIX)/man1/st.1
+ 	tic -sx st.info
++	chmod 644 /usr/share/terminfo/s/st*
+ 	@echo Please see the README file regarding the terminfo entry of st.
++	cp -f st.desktop /usr/share/applications
++	chmod 644 /usr/share/applications/st.desktop
+ 
+ uninstall:
+ 	rm -f $(DESTDIR)$(PREFIX)/bin/st
+ 	rm -f $(DESTDIR)$(MANPREFIX)/man1/st.1
++	rm -f /usr/share/applications/st.desktop
+ 
+ .PHONY: all options clean dist install uninstall
+diff -ruN a/st.c b/st.c
+--- a/st.c	2019-02-09 14:50:41.000000000 +0300
++++ b/st.c	2020-04-25 08:07:34.438075182 +0300
+@@ -35,6 +35,7 @@
+ #define ESC_ARG_SIZ   16
+ #define STR_BUF_SIZ   ESC_BUF_SIZ
+ #define STR_ARG_SIZ   ESC_ARG_SIZ
++#define HISTSIZE      2000
+ 
+ /* macros */
+ #define IS_SET(flag)		((term.mode & (flag)) != 0)
+@@ -42,6 +43,9 @@
+ #define ISCONTROLC1(c)		(BETWEEN(c, 0x80, 0x9f))
+ #define ISCONTROL(c)		(ISCONTROLC0(c) || ISCONTROLC1(c))
+ #define ISDELIM(u)		(utf8strchr(worddelimiters, u) != NULL)
++#define TLINE(y)		((y) < term.scr ? term.hist[((y) + term.histi - \
++				term.scr + HISTSIZE + 1) % HISTSIZE] : \
++				term.line[(y) - term.scr])
+ 
+ enum term_mode {
+ 	MODE_WRAP        = 1 << 0,
+@@ -117,6 +121,9 @@
+ 	int col;      /* nb col */
+ 	Line *line;   /* screen */
+ 	Line *alt;    /* alternate screen */
++	Line hist[HISTSIZE]; /* history buffer */
++	int histi;    /* history index */
++	int scr;      /* scroll back */
+ 	int *dirty;   /* dirtyness of lines */
+ 	TCursor c;    /* cursor */
+ 	int ocx;      /* old cursor col */
+@@ -153,6 +160,7 @@
+ } STREscape;
+ 
+ static void execsh(char *, char **);
++static char *getcwd_by_pid(pid_t pid);
+ static void stty(char **);
+ static void sigchld(int);
+ static void ttywriteraw(const char *, size_t);
+@@ -184,8 +192,8 @@
+ static void tputtab(int);
+ static void tputc(Rune);
+ static void treset(void);
+-static void tscrollup(int, int);
+-static void tscrolldown(int, int);
++static void tscrollup(int, int, int);
++static void tscrolldown(int, int, int);
+ static void tsetattr(int *, int);
+ static void tsetchar(Rune, Glyph *, int, int);
+ static void tsetdirt(int, int);
+@@ -427,10 +435,10 @@
+ {
+ 	int i = term.col;
+ 
+-	if (term.line[y][i - 1].mode & ATTR_WRAP)
++	if (TLINE(y)[i - 1].mode & ATTR_WRAP)
+ 		return i;
+ 
+-	while (i > 0 && term.line[y][i - 1].u == ' ')
++	while (i > 0 && TLINE(y)[i - 1].u == ' ')
+ 		--i;
+ 
+ 	return i;
+@@ -539,7 +547,7 @@
+ 		 * Snap around if the word wraps around at the end or
+ 		 * beginning of a line.
+ 		 */
+-		prevgp = &term.line[*y][*x];
++		prevgp = &TLINE(*y)[*x];
+ 		prevdelim = ISDELIM(prevgp->u);
+ 		for (;;) {
+ 			newx = *x + direction;
+@@ -554,14 +562,14 @@
+ 					yt = *y, xt = *x;
+ 				else
+ 					yt = newy, xt = newx;
+-				if (!(term.line[yt][xt].mode & ATTR_WRAP))
++				if (!(TLINE(yt)[xt].mode & ATTR_WRAP))
+ 					break;
+ 			}
+ 
+ 			if (newx >= tlinelen(newy))
+ 				break;
+ 
+-			gp = &term.line[newy][newx];
++			gp = &TLINE(newy)[newx];
+ 			delim = ISDELIM(gp->u);
+ 			if (!(gp->mode & ATTR_WDUMMY) && (delim != prevdelim
+ 					|| (delim && gp->u != prevgp->u)))
+@@ -582,14 +590,14 @@
+ 		*x = (direction < 0) ? 0 : term.col - 1;
+ 		if (direction < 0) {
+ 			for (; *y > 0; *y += direction) {
+-				if (!(term.line[*y-1][term.col-1].mode
++				if (!(TLINE(*y-1)[term.col-1].mode
+ 						& ATTR_WRAP)) {
+ 					break;
+ 				}
+ 			}
+ 		} else if (direction > 0) {
+ 			for (; *y < term.row-1; *y += direction) {
+-				if (!(term.line[*y][term.col-1].mode
++				if (!(TLINE(*y)[term.col-1].mode
+ 						& ATTR_WRAP)) {
+ 					break;
+ 				}
+@@ -620,13 +628,13 @@
+ 		}
+ 
+ 		if (sel.type == SEL_RECTANGULAR) {
+-			gp = &term.line[y][sel.nb.x];
++			gp = &TLINE(y)[sel.nb.x];
+ 			lastx = sel.ne.x;
+ 		} else {
+-			gp = &term.line[y][sel.nb.y == y ? sel.nb.x : 0];
++			gp = &TLINE(y)[sel.nb.y == y ? sel.nb.x : 0];
+ 			lastx = (sel.ne.y == y) ? sel.ne.x : term.col-1;
+ 		}
+-		last = &term.line[y][MIN(lastx, linelen-1)];
++		last = &TLINE(y)[MIN(lastx, linelen-1)];
+ 		while (last >= gp && last->u == ' ')
+ 			--last;
+ 
+@@ -849,6 +857,9 @@
+ ttywrite(const char *s, size_t n, int may_echo)
+ {
+ 	const char *next;
++	Arg arg = (Arg) { .i = term.scr };
++
++	kscrolldown(&arg);
+ 
+ 	if (may_echo && IS_SET(MODE_ECHO))
+ 		twrite(s, n, 1);
+@@ -1049,6 +1060,26 @@
+ }
+ 
+ void
++newterm(const Arg* a)
++{
++	switch (fork()) {
++	case -1:
++		die("fork failed: %s\n", strerror(errno));
++		break;
++	case 0:
++		chdir(getcwd_by_pid(pid));
++		execlp("st", "./st", NULL);
++		break;
++	}
++}
++
++static char *getcwd_by_pid(pid_t pid) {
++	char buf[32];
++	snprintf(buf, sizeof buf, "/proc/%d/cwd", pid);
++	return realpath(buf, NULL);
++}
++
++void
+ tswapscreen(void)
+ {
+ 	Line *tmp = term.line;
+@@ -1058,15 +1089,53 @@
+ 	term.mode ^= MODE_ALTSCREEN;
+ 	tfulldirt();
+ }
++void
++kscrolldown(const Arg* a)
++{
++	int n = a->i;
++
++	if (n < 0)
++		n = term.row + n;
++
++	if (n > term.scr)
++		n = term.scr;
++
++	if (term.scr > 0) {
++		term.scr -= n;
++		selscroll(0, -n);
++		tfulldirt();
++	}
++}
+ 
+ void
+-tscrolldown(int orig, int n)
++kscrollup(const Arg* a)
++{
++	int n = a->i;
++	if (n < 0)
++		n = term.row + n;
++
++	if (term.scr <= HISTSIZE-n) {
++		term.scr += n;
++		selscroll(0, n);
++		tfulldirt();
++	}
++}
++
++void
++tscrolldown(int orig, int n, int copyhist)
+ {
+ 	int i;
+ 	Line temp;
+ 
+ 	LIMIT(n, 0, term.bot-orig+1);
+ 
++	if (copyhist) {
++		term.histi = (term.histi - 1 + HISTSIZE) % HISTSIZE;
++		temp = term.hist[term.histi];
++		term.hist[term.histi] = term.line[term.bot];
++		term.line[term.bot] = temp;
++	}
++
+ 	tsetdirt(orig, term.bot-n);
+ 	tclearregion(0, term.bot-n+1, term.col-1, term.bot);
+ 
+@@ -1080,13 +1149,23 @@
+ }
+ 
+ void
+-tscrollup(int orig, int n)
++tscrollup(int orig, int n, int copyhist)
+ {
+ 	int i;
+ 	Line temp;
+ 
+ 	LIMIT(n, 0, term.bot-orig+1);
+ 
++	if (copyhist) {
++		term.histi = (term.histi + 1) % HISTSIZE;
++		temp = term.hist[term.histi];
++		term.hist[term.histi] = term.line[orig];
++		term.line[orig] = temp;
++	}
++
++	if (term.scr > 0 && term.scr < HISTSIZE)
++		term.scr = MIN(term.scr + n, HISTSIZE-1);
++
+ 	tclearregion(0, orig, term.col-1, orig+n-1);
+ 	tsetdirt(orig+n, term.bot);
+ 
+@@ -1135,7 +1214,7 @@
+ 	int y = term.c.y;
+ 
+ 	if (y == term.bot) {
+-		tscrollup(term.top, 1);
++		tscrollup(term.top, 1, 1);
+ 	} else {
+ 		y++;
+ 	}
+@@ -1300,14 +1379,14 @@
+ tinsertblankline(int n)
+ {
+ 	if (BETWEEN(term.c.y, term.top, term.bot))
+-		tscrolldown(term.c.y, n);
++		tscrolldown(term.c.y, n, 0);
+ }
+ 
+ void
+ tdeleteline(int n)
+ {
+ 	if (BETWEEN(term.c.y, term.top, term.bot))
+-		tscrollup(term.c.y, n);
++		tscrollup(term.c.y, n, 0);
+ }
+ 
+ int32_t
+@@ -1737,11 +1816,11 @@
+ 		break;
+ 	case 'S': /* SU -- Scroll <n> line up */
+ 		DEFAULT(csiescseq.arg[0], 1);
+-		tscrollup(term.top, csiescseq.arg[0]);
++		tscrollup(term.top, csiescseq.arg[0], 0);
+ 		break;
+ 	case 'T': /* SD -- Scroll <n> line down */
+ 		DEFAULT(csiescseq.arg[0], 1);
+-		tscrolldown(term.top, csiescseq.arg[0]);
++		tscrolldown(term.top, csiescseq.arg[0], 0);
+ 		break;
+ 	case 'L': /* IL -- Insert <n> blank lines */
+ 		DEFAULT(csiescseq.arg[0], 1);
+@@ -2243,7 +2322,7 @@
+ 		return 0;
+ 	case 'D': /* IND -- Linefeed */
+ 		if (term.c.y == term.bot) {
+-			tscrollup(term.top, 1);
++			tscrollup(term.top, 1, 1);
+ 		} else {
+ 			tmoveto(term.c.x, term.c.y+1);
+ 		}
+@@ -2256,7 +2335,7 @@
+ 		break;
+ 	case 'M': /* RI -- Reverse index */
+ 		if (term.c.y == term.top) {
+-			tscrolldown(term.top, 1);
++			tscrolldown(term.top, 1, 1);
+ 		} else {
+ 			tmoveto(term.c.x, term.c.y-1);
+ 		}
+@@ -2475,7 +2554,7 @@
+ void
+ tresize(int col, int row)
+ {
+-	int i;
++	int i, j;
+ 	int minrow = MIN(row, term.row);
+ 	int mincol = MIN(col, term.col);
+ 	int *bp;
+@@ -2512,6 +2591,14 @@
+ 	term.dirty = xrealloc(term.dirty, row * sizeof(*term.dirty));
+ 	term.tabs = xrealloc(term.tabs, col * sizeof(*term.tabs));
+ 
++	for (i = 0; i < HISTSIZE; i++) {
++		term.hist[i] = xrealloc(term.hist[i], col * sizeof(Glyph));
++		for (j = mincol; j < col; j++) {
++			term.hist[i][j] = term.c.attr;
++			term.hist[i][j].u = ' ';
++		}
++	}
++
+ 	/* resize each row to new width, zero-pad if needed */
+ 	for (i = 0; i < minrow; i++) {
+ 		term.line[i] = xrealloc(term.line[i], col * sizeof(Glyph));
+@@ -2569,7 +2656,7 @@
+ 			continue;
+ 
+ 		term.dirty[y] = 0;
+-		xdrawline(term.line[y], x1, y, x2);
++		xdrawline(TLINE(y), x1, y, x2);
+ 	}
+ }
+ 
+@@ -2590,7 +2677,8 @@
+ 		cx--;
+ 
+ 	drawregion(0, 0, term.col, term.row);
+-	xdrawcursor(cx, term.c.y, term.line[term.c.y][cx],
++	if (term.scr == 0)
++		xdrawcursor(cx, term.c.y, term.line[term.c.y][cx],
+ 			term.ocx, term.ocy, term.line[term.ocy][term.ocx]);
+ 	term.ocx = cx, term.ocy = term.c.y;
+ 	xfinishdraw();
+diff -ruN a/st.desktop b/st.desktop
+--- a/st.desktop	1970-01-01 03:00:00.000000000 +0300
++++ b/st.desktop	2020-04-25 08:07:34.440075182 +0300
+@@ -0,0 +1,7 @@
++[Desktop Entry]
++Type=Application
++Name=st
++Comment=simple-terminal emulator for X
++Icon=utilities-terminal
++Exec=st
++Categories=System;TerminalEmulator
+diff -ruN a/st.h b/st.h
+--- a/st.h	2019-02-09 14:50:41.000000000 +0300
++++ b/st.h	2020-04-25 08:09:23.045079635 +0300
+@@ -76,10 +76,20 @@
+ 	const void *v;
+ } Arg;
+ 
++typedef struct {
++	 uint b;
++	 uint mask;
++	 void (*func)(const Arg *);
++	 const Arg arg;
++} MouseKey;
++
+ void die(const char *, ...);
+ void redraw(void);
+ void draw(void);
+ 
++void kscrolldown(const Arg *);
++void kscrollup(const Arg *);
++void newterm(const Arg *);
+ void printscreen(const Arg *);
+ void printsel(const Arg *);
+ void sendbreak(const Arg *);
+@@ -120,3 +130,5 @@
+ extern unsigned int tabspaces;
+ extern unsigned int defaultfg;
+ extern unsigned int defaultbg;
++extern MouseKey mkeys[];
++extern float alpha;
+diff -ruN a/x.c b/x.c
+--- a/x.c	2019-02-09 14:50:41.000000000 +0300
++++ b/x.c	2020-04-25 08:07:55.069076028 +0300
+@@ -78,6 +78,7 @@
+ typedef struct {
+ 	int tw, th; /* tty width and height */
+ 	int w, h; /* window width and height */
++	int hborderpx, vborderpx;
+ 	int ch; /* char height */
+ 	int cw; /* char width  */
+ 	int mode; /* window state/mode flags */
+@@ -96,8 +97,14 @@
+ 	Draw draw;
+ 	Visual *vis;
+ 	XSetWindowAttributes attrs;
++	/* Here, we use the term *pointer* to differentiate the cursor
++	 * one sees when hovering the mouse over the terminal from, e.g.,
++	 * a green rectangle where text would be entered. */
++	Cursor vpointer, bpointer; /* visible and hidden pointers */
++	int pointerisvisible;
+ 	int scr;
+ 	int isfixed; /* is fixed geometry? */
++	int depth; /* bit depth */
+ 	int l, t; /* left and top offset */
+ 	int gm; /* geometry mask */
+ } XWindow;
+@@ -229,6 +236,7 @@
+ static double usedfontsize = 0;
+ static double defaultfontsize = 0;
+ 
++static char *opt_alpha = NULL;
+ static char *opt_class = NULL;
+ static char **opt_cmd  = NULL;
+ static char *opt_embed = NULL;
+@@ -311,7 +319,7 @@
+ int
+ evcol(XEvent *e)
+ {
+-	int x = e->xbutton.x - borderpx;
++	int x = e->xbutton.x - win.hborderpx;
+ 	LIMIT(x, 0, win.tw - 1);
+ 	return x / win.cw;
+ }
+@@ -319,7 +327,7 @@
+ int
+ evrow(XEvent *e)
+ {
+-	int y = e->xbutton.y - borderpx;
++	int y = e->xbutton.y - win.vborderpx;
+ 	LIMIT(y, 0, win.th - 1);
+ 	return y / win.ch;
+ }
+@@ -409,6 +417,7 @@
+ {
+ 	struct timespec now;
+ 	MouseShortcut *ms;
++	MouseKey *mk;
+ 	int snap;
+ 
+ 	if (IS_SET(MODE_MOUSE) && !(e->xbutton.state & forceselmod)) {
+@@ -424,6 +433,14 @@
+ 		}
+ 	}
+ 
++	for (mk = mkeys; mk < mkeys + LEN(mkeys); mk++) {
++		if (e->xbutton.button == mk->b
++				&& match(mk->mask, e->xbutton.state)) {
++			mk->func(&mk->arg);
++			return;
++		}
++	}
++
+ 	if (e->xbutton.button == Button1) {
+ 		/*
+ 		 * If the user clicks below predefined timeouts specific
+@@ -627,6 +644,8 @@
+ 	XSetSelectionOwner(xw.dpy, XA_PRIMARY, xw.win, t);
+ 	if (XGetSelectionOwner(xw.dpy, XA_PRIMARY) != xw.win)
+ 		selclear();
++
++	clipcopy(NULL);
+ }
+ 
+ void
+@@ -643,8 +662,8 @@
+ 		return;
+ 	}
+ 
+-	if (e->xbutton.button == Button2)
+-		selpaste(NULL);
++	if (e->xbutton.button == Button3)
++		clippaste(NULL);
+ 	else if (e->xbutton.button == Button1)
+ 		mousesel(e, 1);
+ }
+@@ -652,6 +671,13 @@
+ void
+ bmotion(XEvent *e)
+ {
++	if (!xw.pointerisvisible) {
++		XDefineCursor(xw.dpy, xw.win, xw.vpointer);
++		xw.pointerisvisible = 1;
++		if (!IS_SET(MODE_MOUSEMANY))
++			xsetpointermotion(0);
++	}
++
+ 	if (IS_SET(MODE_MOUSE) && !(e->xbutton.state & forceselmod)) {
+ 		mousereport(e);
+ 		return;
+@@ -675,6 +701,9 @@
+ 	col = MAX(1, col);
+ 	row = MAX(1, row);
+ 
++	win.hborderpx = (win.w - col * win.cw) / 2;
++	win.vborderpx = (win.h - row * win.ch) / 2;
++
+ 	tresize(col, row);
+ 	xresize(col, row);
+ 	ttyresize(win.tw, win.th);
+@@ -688,7 +717,7 @@
+ 
+ 	XFreePixmap(xw.dpy, xw.buf);
+ 	xw.buf = XCreatePixmap(xw.dpy, xw.win, win.w, win.h,
+-			DefaultDepth(xw.dpy, xw.scr));
++			xw.depth);
+ 	XftDrawChange(xw.draw, xw.buf);
+ 	xclear(0, 0, win.w, win.h);
+ 
+@@ -748,6 +777,13 @@
+ 			else
+ 				die("could not allocate color %d\n", i);
+ 		}
++
++	/* set alpha value of bg color */
++	if (opt_alpha)
++		alpha = strtof(opt_alpha, NULL);
++	dc.col[defaultbg].color.alpha = (unsigned short)(0xffff * alpha);
++	dc.col[defaultbg].pixel &= 0x00FFFFFF;
++	dc.col[defaultbg].pixel |= (unsigned char)(0xff * alpha) << 24;
+ 	loaded = 1;
+ }
+ 
+@@ -793,8 +829,8 @@
+ 	sizeh->flags = PSize | PResizeInc | PBaseSize | PMinSize;
+ 	sizeh->height = win.h;
+ 	sizeh->width = win.w;
+-	sizeh->height_inc = win.ch;
+-	sizeh->width_inc = win.cw;
++	sizeh->height_inc = 1;
++	sizeh->width_inc = 1;
+ 	sizeh->base_height = 2 * borderpx;
+ 	sizeh->base_width = 2 * borderpx;
+ 	sizeh->min_height = win.ch + 2 * borderpx;
+@@ -1004,11 +1040,24 @@
+ 	Window parent;
+ 	pid_t thispid = getpid();
+ 	XColor xmousefg, xmousebg;
++	Pixmap blankpm;
++    XWindowAttributes attr;
++	XVisualInfo vis;
+ 
+ 	if (!(xw.dpy = XOpenDisplay(NULL)))
+ 		die("can't open display\n");
+ 	xw.scr = XDefaultScreen(xw.dpy);
+-	xw.vis = XDefaultVisual(xw.dpy, xw.scr);
++
++	if (!(opt_embed && (parent = strtol(opt_embed, NULL, 0)))) {
++		parent = XRootWindow(xw.dpy, xw.scr);
++		xw.depth = 32;
++	} else {
++		XGetWindowAttributes(xw.dpy, parent, &attr);
++		xw.depth = attr.depth;
++	}
++
++	XMatchVisualInfo(xw.dpy, xw.scr, xw.depth, TrueColor, &vis);
++	xw.vis = vis.visual;
+ 
+ 	/* font */
+ 	if (!FcInit())
+@@ -1018,12 +1067,12 @@
+ 	xloadfonts(usedfont, 0);
+ 
+ 	/* colors */
+-	xw.cmap = XDefaultColormap(xw.dpy, xw.scr);
++	xw.cmap = XCreateColormap(xw.dpy, parent, xw.vis, None);
+ 	xloadcols();
+ 
+ 	/* adjust fixed window geometry */
+-	win.w = 2 * borderpx + cols * win.cw;
+-	win.h = 2 * borderpx + rows * win.ch;
++	win.w = 2 * win.hborderpx + cols * win.cw;
++	win.h = 2 * win.vborderpx + rows * win.ch;
+ 	if (xw.gm & XNegative)
+ 		xw.l += DisplayWidth(xw.dpy, xw.scr) - win.w - 2;
+ 	if (xw.gm & YNegative)
+@@ -1038,19 +1087,15 @@
+ 		| ButtonMotionMask | ButtonPressMask | ButtonReleaseMask;
+ 	xw.attrs.colormap = xw.cmap;
+ 
+-	if (!(opt_embed && (parent = strtol(opt_embed, NULL, 0))))
+-		parent = XRootWindow(xw.dpy, xw.scr);
+ 	xw.win = XCreateWindow(xw.dpy, parent, xw.l, xw.t,
+-			win.w, win.h, 0, XDefaultDepth(xw.dpy, xw.scr), InputOutput,
++			win.w, win.h, 0, xw.depth, InputOutput,
+ 			xw.vis, CWBackPixel | CWBorderPixel | CWBitGravity
+ 			| CWEventMask | CWColormap, &xw.attrs);
+ 
+ 	memset(&gcvalues, 0, sizeof(gcvalues));
+ 	gcvalues.graphics_exposures = False;
+-	dc.gc = XCreateGC(xw.dpy, parent, GCGraphicsExposures,
+-			&gcvalues);
+-	xw.buf = XCreatePixmap(xw.dpy, xw.win, win.w, win.h,
+-			DefaultDepth(xw.dpy, xw.scr));
++	xw.buf = XCreatePixmap(xw.dpy, xw.win, win.w, win.h, xw.depth);
++	dc.gc = XCreateGC(xw.dpy, xw.buf, GCGraphicsExposures, &gcvalues);
+ 	XSetForeground(xw.dpy, dc.gc, dc.col[defaultbg].pixel);
+ 	XFillRectangle(xw.dpy, xw.buf, dc.gc, 0, 0, win.w, win.h);
+ 
+@@ -1079,8 +1124,9 @@
+ 		die("XCreateIC failed. Could not obtain input method.\n");
+ 
+ 	/* white cursor, black outline */
+-	cursor = XCreateFontCursor(xw.dpy, mouseshape);
+-	XDefineCursor(xw.dpy, xw.win, cursor);
++	xw.pointerisvisible = 1;
++	xw.vpointer = XCreateFontCursor(xw.dpy, mouseshape);
++	XDefineCursor(xw.dpy, xw.win, xw.vpointer);
+ 
+ 	if (XParseColor(xw.dpy, xw.cmap, colorname[mousefg], &xmousefg) == 0) {
+ 		xmousefg.red   = 0xffff;
+@@ -1094,7 +1140,10 @@
+ 		xmousebg.blue  = 0x0000;
+ 	}
+ 
+-	XRecolorCursor(xw.dpy, cursor, &xmousefg, &xmousebg);
++	XRecolorCursor(xw.dpy, xw.vpointer, &xmousefg, &xmousebg);
++	blankpm = XCreateBitmapFromData(xw.dpy, xw.win, &(char){0}, 1, 1);
++	xw.bpointer = XCreatePixmapCursor(xw.dpy, blankpm, blankpm,
++					  &xmousefg, &xmousebg, 0, 0);
+ 
+ 	xw.xembed = XInternAtom(xw.dpy, "_XEMBED", False);
+ 	xw.wmdeletewin = XInternAtom(xw.dpy, "WM_DELETE_WINDOW", False);
+@@ -1123,7 +1172,7 @@
+ int
+ xmakeglyphfontspecs(XftGlyphFontSpec *specs, const Glyph *glyphs, int len, int x, int y)
+ {
+-	float winx = borderpx + x * win.cw, winy = borderpx + y * win.ch, xp, yp;
++	float winx = win.hborderpx + x * win.cw, winy = win.vborderpx + y * win.ch, xp, yp;
+ 	ushort mode, prevmode = USHRT_MAX;
+ 	Font *font = &dc.font;
+ 	int frcflags = FRC_NORMAL;
+@@ -1259,7 +1308,7 @@
+ xdrawglyphfontspecs(const XftGlyphFontSpec *specs, Glyph base, int len, int x, int y)
+ {
+ 	int charlen = len * ((base.mode & ATTR_WIDE) ? 2 : 1);
+-	int winx = borderpx + x * win.cw, winy = borderpx + y * win.ch,
++	int winx = win.hborderpx + x * win.cw, winy = win.vborderpx + y * win.ch,
+ 	    width = charlen * win.cw;
+ 	Color *fg, *bg, *temp, revfg, revbg, truefg, truebg;
+ 	XRenderColor colfg, colbg;
+@@ -1296,10 +1345,6 @@
+ 		bg = &dc.col[base.bg];
+ 	}
+ 
+-	/* Change basic system colors [0-7] to bright system colors [8-15] */
+-	if ((base.mode & ATTR_BOLD_FAINT) == ATTR_BOLD && BETWEEN(base.fg, 0, 7))
+-		fg = &dc.col[base.fg + 8];
+-
+ 	if (IS_SET(MODE_REVERSE)) {
+ 		if (fg == &dc.col[defaultfg]) {
+ 			fg = &dc.col[defaultbg];
+@@ -1349,17 +1394,17 @@
+ 
+ 	/* Intelligent cleaning up of the borders. */
+ 	if (x == 0) {
+-		xclear(0, (y == 0)? 0 : winy, borderpx,
++		xclear(0, (y == 0)? 0 : winy, win.vborderpx,
+ 			winy + win.ch +
+-			((winy + win.ch >= borderpx + win.th)? win.h : 0));
++			((winy + win.ch >= win.vborderpx + win.th)? win.h : 0));
+ 	}
+-	if (winx + width >= borderpx + win.tw) {
++	if (winx + width >= win.hborderpx + win.tw) {
+ 		xclear(winx + width, (y == 0)? 0 : winy, win.w,
+-			((winy + win.ch >= borderpx + win.th)? win.h : (winy + win.ch)));
++			((winy + win.ch >= win.vborderpx + win.th)? win.h : (winy + win.ch)));
+ 	}
+ 	if (y == 0)
+-		xclear(winx, 0, winx + width, borderpx);
+-	if (winy + win.ch >= borderpx + win.th)
++		xclear(winx, 0, winx + width, win.hborderpx);
++	if (winy + win.ch >= win.vborderpx + win.th)
+ 		xclear(winx, winy + win.ch, winx + width, win.h);
+ 
+ 	/* Clean up the region we want to draw to. */
+@@ -1452,35 +1497,35 @@
+ 		case 3: /* Blinking Underline */
+ 		case 4: /* Steady Underline */
+ 			XftDrawRect(xw.draw, &drawcol,
+-					borderpx + cx * win.cw,
+-					borderpx + (cy + 1) * win.ch - \
++					win.hborderpx + cx * win.cw,
++					win.vborderpx + (cy + 1) * win.ch - \
+ 						cursorthickness,
+ 					win.cw, cursorthickness);
+ 			break;
+ 		case 5: /* Blinking bar */
+ 		case 6: /* Steady bar */
+ 			XftDrawRect(xw.draw, &drawcol,
+-					borderpx + cx * win.cw,
+-					borderpx + cy * win.ch,
++					win.hborderpx + cx * win.cw,
++					win.vborderpx + cy * win.ch,
+ 					cursorthickness, win.ch);
+ 			break;
+ 		}
+ 	} else {
+ 		XftDrawRect(xw.draw, &drawcol,
+-				borderpx + cx * win.cw,
+-				borderpx + cy * win.ch,
++				win.hborderpx + cx * win.cw,
++				win.vborderpx + cy * win.ch,
+ 				win.cw - 1, 1);
+ 		XftDrawRect(xw.draw, &drawcol,
+-				borderpx + cx * win.cw,
+-				borderpx + cy * win.ch,
++				win.hborderpx + cx * win.cw,
++				win.vborderpx + cy * win.ch,
+ 				1, win.ch - 1);
+ 		XftDrawRect(xw.draw, &drawcol,
+-				borderpx + (cx + 1) * win.cw - 1,
+-				borderpx + cy * win.ch,
++				win.hborderpx + (cx + 1) * win.cw - 1,
++				win.vborderpx + cy * win.ch,
+ 				1, win.ch - 1);
+ 		XftDrawRect(xw.draw, &drawcol,
+-				borderpx + cx * win.cw,
+-				borderpx + (cy + 1) * win.ch - 1,
++				win.hborderpx + cx * win.cw,
++				win.vborderpx + (cy + 1) * win.ch - 1,
+ 				win.cw, 1);
+ 	}
+ }
+@@ -1577,6 +1622,8 @@
+ void
+ xsetpointermotion(int set)
+ {
++	if (!set && !xw.pointerisvisible)
++		return;
+ 	MODBIT(xw.attrs.event_mask, set, PointerMotionMask);
+ 	XChangeWindowAttributes(xw.dpy, xw.win, CWEventMask, &xw.attrs);
+ }
+@@ -1695,6 +1742,12 @@
+ 	Status status;
+ 	Shortcut *bp;
+ 
++	if (xw.pointerisvisible) {
++		XDefineCursor(xw.dpy, xw.win, xw.bpointer);
++		xsetpointermotion(1);
++		xw.pointerisvisible = 0;
++	}
++
+ 	if (IS_SET(MODE_KBDLOCK))
+ 		return;
+ 
+@@ -1894,6 +1947,9 @@
+ 	case 'a':
+ 		allowaltscreen = 0;
+ 		break;
++	case 'A':
++		opt_alpha = EARGF(usage());
++		break;
+ 	case 'c':
+ 		opt_class = EARGF(usage());
+ 		break;

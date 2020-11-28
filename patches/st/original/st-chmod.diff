@@ -1,0 +1,17 @@
+--- a/Makefile	2019-02-09 14:50:41.000000000 +0300
++++ b/Makefile	2019-11-15 20:24:46.027142062 +0300
+@@ -48,10 +48,14 @@
+ 	sed "s/VERSION/$(VERSION)/g" < st.1 > $(DESTDIR)$(MANPREFIX)/man1/st.1
+ 	chmod 644 $(DESTDIR)$(MANPREFIX)/man1/st.1
+ 	tic -sx st.info
++	chmod 644 /usr/share/terminfo/s/st*
+ 	@echo Please see the README file regarding the terminfo entry of st.
++	cp -f st.desktop /usr/share/applications
++	chmod 644 /usr/share/applications/st.desktop
+ 
+ uninstall:
+ 	rm -f $(DESTDIR)$(PREFIX)/bin/st
+ 	rm -f $(DESTDIR)$(MANPREFIX)/man1/st.1
++	rm -f /usr/share/applications/st.desktop
+ 
+ .PHONY: all options clean dist install uninstall
