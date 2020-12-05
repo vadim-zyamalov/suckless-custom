@@ -1,18 +1,17 @@
 diff -ruN dmenu-orig/config.def.h dmenu-patched/config.def.h
 --- dmenu-orig/config.def.h	2020-09-02 19:37:07.000000000 +0300
-+++ dmenu-patched/config.def.h	2020-11-27 10:07:23.840087779 +0300
-@@ -2,6 +2,10 @@
++++ dmenu-patched/config.def.h	2020-12-05 09:04:40.401305321 +0300
+@@ -2,6 +2,9 @@
  /* Default settings; can be overriden by command line. */
  
  static int topbar = 1;                      /* -b  option; if 0, dmenu appears at bottom     */
-+static int fuzzy = 0;                      /* -F  option; if 0, dmenu doesn't use fuzzy matching     */
-+static int colorprompt = 1;                /* -p  option; if 1, prompt uses SchemeSel, otherwise SchemeNorm */
++static int fuzzy = 1;                      /* -F  option; if 0, dmenu doesn't use fuzzy matching     */
 +static int centered = 0;                    /* -c option; centers dmenu on screen */
 +static int min_width = 500;                    /* minimum width when centered */
  /* -fn option overrides fonts[0]; default X11 font or font set */
  static const char *fonts[] = {
  	"monospace:size=10"
-@@ -11,6 +15,8 @@
+@@ -11,13 +14,19 @@
  	/*     fg         bg       */
  	[SchemeNorm] = { "#bbbbbb", "#222222" },
  	[SchemeSel] = { "#eeeeee", "#005577" },
@@ -20,17 +19,22 @@ diff -ruN dmenu-orig/config.def.h dmenu-patched/config.def.h
 +	[SchemeNormHighlight] = { "#ffc978", "#222222" },
  	[SchemeOut] = { "#000000", "#00ffff" },
  };
- /* -l option; if nonzero, dmenu uses vertical list with given number of lines */
-@@ -21,3 +27,6 @@
+-/* -l option; if nonzero, dmenu uses vertical list with given number of lines */
++/* -l and -g options; controls number of lines and columns in grid if > 0 */
+ static unsigned int lines      = 0;
++static unsigned int columns    = 0;
+ 
+ /*
+  * Characters not considered part of a word while deleting words
   * for example: " /?\"&[]"
   */
  static const char worddelimiters[] = " ";
 +
 +/* Size of the window border */
-+static unsigned int border_width = 5;
++static unsigned int border_width = 0;
 diff -ruN dmenu-orig/config.mk dmenu-patched/config.mk
 --- dmenu-orig/config.mk	2020-09-02 19:37:07.000000000 +0300
-+++ dmenu-patched/config.mk	2020-11-27 10:06:17.033085040 +0300
++++ dmenu-patched/config.mk	2020-12-05 08:59:53.647330589 +0300
 @@ -20,7 +20,7 @@
  
  # includes and libs
@@ -42,8 +46,17 @@ diff -ruN dmenu-orig/config.mk dmenu-patched/config.mk
  CPPFLAGS = -D_DEFAULT_SOURCE -D_BSD_SOURCE -D_XOPEN_SOURCE=700 -D_POSIX_C_SOURCE=200809L -DVERSION=\"$(VERSION)\" $(XINERAMAFLAGS)
 diff -ruN dmenu-orig/dmenu.1 dmenu-patched/dmenu.1
 --- dmenu-orig/dmenu.1	2020-09-02 19:37:07.000000000 +0300
-+++ dmenu-patched/dmenu.1	2020-11-27 10:06:17.036085040 +0300
-@@ -40,6 +40,9 @@
++++ dmenu-patched/dmenu.1	2020-12-05 08:59:21.250333444 +0300
+@@ -4,6 +4,8 @@
+ .SH SYNOPSIS
+ .B dmenu
+ .RB [ \-bfiv ]
++.RB [ \-g
++.IR columns ]
+ .RB [ \-l
+ .IR lines ]
+ .RB [ \-m
+@@ -40,6 +42,9 @@
  .B \-b
  dmenu appears at the bottom of the screen.
  .TP
@@ -53,9 +66,22 @@ diff -ruN dmenu-orig/dmenu.1 dmenu-patched/dmenu.1
  .B \-f
  dmenu grabs the keyboard before reading stdin if not reading from a tty. This
  is faster, but will lock up X until stdin reaches end\-of\-file.
+@@ -47,8 +52,11 @@
+ .B \-i
+ dmenu matches menu items case insensitively.
+ .TP
++.BI \-g " columns"
++dmenu lists items in a grid with the given number of columns.
++.TP
+ .BI \-l " lines"
+-dmenu lists items vertically, with the given number of lines.
++dmenu lists items in a grid with the given number of lines.
+ .TP
+ .BI \-m " monitor"
+ dmenu is displayed on the monitor number supplied. Monitor numbers are starting
 diff -ruN dmenu-orig/dmenu.c dmenu-patched/dmenu.c
 --- dmenu-orig/dmenu.c	2020-09-02 19:37:07.000000000 +0300
-+++ dmenu-patched/dmenu.c	2020-11-27 10:06:43.299086117 +0300
++++ dmenu-patched/dmenu.c	2020-12-05 09:04:40.404305321 +0300
 @@ -1,6 +1,7 @@
  /* See LICENSE file for copyright and license details. */
  #include <ctype.h>
@@ -64,7 +90,7 @@ diff -ruN dmenu-orig/dmenu.c dmenu-patched/dmenu.c
  #include <stdio.h>
  #include <stdlib.h>
  #include <string.h>
-@@ -15,23 +16,25 @@
+@@ -15,6 +16,7 @@
  #include <X11/extensions/Xinerama.h>
  #endif
  #include <X11/Xft/Xft.h>
@@ -72,12 +98,7 @@ diff -ruN dmenu-orig/dmenu.c dmenu-patched/dmenu.c
  
  #include "drw.h"
  #include "util.h"
- 
- /* macros */
- #define INTERSECT(x,y,w,h,r)  (MAX(0, MIN((x)+(w),(r).x_org+(r).width)  - MAX((x),(r).x_org)) \
--                             * MAX(0, MIN((y)+(h),(r).y_org+(r).height) - MAX((y),(r).y_org)))
-+							 * MAX(0, MIN((y)+(h),(r).y_org+(r).height) - MAX((y),(r).y_org)))
- #define LENGTH(X)             (sizeof X / sizeof X[0])
+@@ -26,12 +28,13 @@
  #define TEXTW(X)              (drw_fontset_getwidth(drw, (X)) + lrpad)
  
  /* enums */
@@ -103,6 +124,15 @@ diff -ruN dmenu-orig/dmenu.c dmenu-patched/dmenu.c
  #include "config.h"
  
  static int (*fstrncmp)(const char *, const char *, size_t) = strncmp;
+@@ -77,7 +84,7 @@
+ 	int i, n;
+ 
+ 	if (lines > 0)
+-		n = lines * bh;
++		n = lines * columns * bh;
+ 	else
+ 		n = mw - (promptw + inputw + TEXTW("<") + TEXTW(">"));
+ 	/* calculate which items will begin the next page and previous page */
 @@ -89,6 +96,15 @@
  			break;
  }
@@ -173,34 +203,26 @@ diff -ruN dmenu-orig/dmenu.c dmenu-patched/dmenu.c
  }
  
  static void
-@@ -137,7 +191,8 @@
- 	drw_rect(drw, 0, 0, mw, mh, 1, 1);
- 
- 	if (prompt && *prompt) {
--		drw_setscheme(drw, scheme[SchemeSel]);
-+		if (colorprompt)
-+			drw_setscheme(drw, scheme[SchemeSel]);
- 		x = drw_text(drw, x, 0, promptw, bh, lrpad / 2, prompt, 0);
+@@ -152,9 +206,15 @@
  	}
- 	/* draw input field */
-@@ -154,7 +209,7 @@
+ 
  	if (lines > 0) {
- 		/* draw vertical list */
- 		for (item = curr; item != next; item = item->right)
+-		/* draw vertical list */
+-		for (item = curr; item != next; item = item->right)
 -			drawitem(item, x, y += bh, mw - x);
-+			drawitem(item, 0, y += bh, mw);
++		/* draw grid */
++		int i = 0;
++		for (item = curr; item != next; item = item->right, i++)
++			drawitem(
++				item,
++				x + ((i / lines) *  ((mw - x) / columns)),
++				y + (((i % lines) + 1) * bh),
++				(mw - x) / columns
++			);
  	} else if (matches) {
  		/* draw horizontal list */
  		x += inputw;
-@@ -203,16 +258,101 @@
- 	/* try to grab keyboard, we may have to wait for another process to ungrab */
- 	for (i = 0; i < 1000; i++) {
- 		if (XGrabKeyboard(dpy, DefaultRootWindow(dpy), True, GrabModeAsync,
--		                  GrabModeAsync, CurrentTime) == GrabSuccess)
-+						  GrabModeAsync, CurrentTime) == GrabSuccess)
- 			return;
- 		nanosleep(&ts, NULL);
- 	}
+@@ -210,9 +270,94 @@
  	die("cannot grab keyboard");
  }
  
@@ -295,27 +317,7 @@ diff -ruN dmenu-orig/dmenu.c dmenu-patched/dmenu.c
  	static char **tokv = NULL;
  	static int tokn = 0;
  
-@@ -357,7 +497,7 @@
- 		case XK_y: /* paste selection */
- 		case XK_Y:
- 			XConvertSelection(dpy, (ev->state & ShiftMask) ? clip : XA_PRIMARY,
--			                  utf8, utf8, win, CurrentTime);
-+							  utf8, utf8, win, CurrentTime);
- 			return;
- 		case XK_Left:
- 			movewordedge(-1);
-@@ -510,8 +650,8 @@
- 
- 	/* we have been given the current selection, now insert it into input */
- 	if (XGetWindowProperty(dpy, win, utf8, 0, (sizeof text / 4) + 1, False,
--	                   utf8, &da, &di, &dl, &dl, (unsigned char **)&p)
--	    == Success && p) {
-+					   utf8, &da, &di, &dl, &dl, (unsigned char **)&p)
-+		== Success && p) {
- 		insert(p, (q = strchr(p, '\n')) ? q - p : (ssize_t)strlen(p));
- 		XFree(p);
- 	}
-@@ -601,8 +741,13 @@
+@@ -601,8 +746,13 @@
  	int a, di, n, area = 0;
  #endif
  	/* init appearance */
@@ -331,7 +333,7 @@ diff -ruN dmenu-orig/dmenu.c dmenu-patched/dmenu.c
  
  	clip = XInternAtom(dpy, "CLIPBOARD",   False);
  	utf8 = XInternAtom(dpy, "UTF8_STRING", False);
-@@ -611,6 +756,7 @@
+@@ -611,6 +761,7 @@
  	bh = drw->fonts->h + 2;
  	lines = MAX(lines, 0);
  	mh = (lines + 1) * bh;
@@ -339,7 +341,7 @@ diff -ruN dmenu-orig/dmenu.c dmenu-patched/dmenu.c
  #ifdef XINERAMA
  	i = 0;
  	if (parentwin == root && (info = XineramaQueryScreens(dpy, &n))) {
-@@ -637,21 +783,34 @@
+@@ -637,9 +788,16 @@
  				if (INTERSECT(x, y, 1, 1, info[i]))
  					break;
  
@@ -359,16 +361,13 @@ diff -ruN dmenu-orig/dmenu.c dmenu-patched/dmenu.c
  		XFree(info);
  	} else
  #endif
- 	{
+@@ -647,11 +805,17 @@
  		if (!XGetWindowAttributes(dpy, parentwin, &wa))
  			die("could not get embedding window attributes: 0x%lx",
--			    parentwin);
+ 			    parentwin);
 -		x = 0;
 -		y = topbar ? 0 : wa.height - mh;
 -		mw = wa.width;
--	}
--	promptw = (prompt && *prompt) ? TEXTW(prompt) - lrpad / 4 : 0;
-+				parentwin);
 +
 +		if (centered) {
 +			mw = MIN(MAX(max_textw() + promptw, min_width), wa.width);
@@ -379,40 +378,25 @@ diff -ruN dmenu-orig/dmenu.c dmenu-patched/dmenu.c
 +			y = topbar ? 0 : wa.height - mh;
 +			mw = wa.width;
 +		}
-+ 	}
+ 	}
+-	promptw = (prompt && *prompt) ? TEXTW(prompt) - lrpad / 4 : 0;
  	inputw = MIN(inputw, mw/3);
  	match();
  
-@@ -659,9 +818,11 @@
+@@ -659,9 +823,11 @@
  	swa.override_redirect = True;
  	swa.background_pixel = scheme[SchemeNorm][ColBg].pixel;
  	swa.event_mask = ExposureMask | KeyPressMask | VisibilityChangeMask;
 -	win = XCreateWindow(dpy, parentwin, x, y, mw, mh, 0,
--	                    CopyFromParent, CopyFromParent, CopyFromParent,
--	                    CWOverrideRedirect | CWBackPixel | CWEventMask, &swa);
 +	win = XCreateWindow(dpy, parentwin, x, y, mw, mh, border_width,
-+						CopyFromParent, CopyFromParent, CopyFromParent,
-+						CWOverrideRedirect | CWBackPixel | CWEventMask, &swa);
+ 	                    CopyFromParent, CopyFromParent, CopyFromParent,
+ 	                    CWOverrideRedirect | CWBackPixel | CWEventMask, &swa);
 +	if (border_width)
 +		XSetWindowBorder(dpy, win, scheme[SchemeSel][ColBg].pixel);
  	XSetClassHint(dpy, win, &ch);
  
  
-@@ -670,7 +831,7 @@
- 		die("XOpenIM failed: could not open input device");
- 
- 	xic = XCreateIC(xim, XNInputStyle, XIMPreeditNothing | XIMStatusNothing,
--	                XNClientWindow, win, XNFocusWindow, win, NULL);
-+					XNClientWindow, win, XNFocusWindow, win, NULL);
- 
- 	XMapRaised(dpy, win);
- 	if (embed) {
-@@ -690,10 +851,45 @@
- usage(void)
- {
- 	fputs("usage: dmenu [-bfiv] [-l lines] [-p prompt] [-fn font] [-m monitor]\n"
--	      "             [-nb color] [-nf color] [-sb color] [-sf color] [-w windowid]\n", stderr);
-+		  "             [-nb color] [-nf color] [-sb color] [-sf color] [-w windowid]\n", stderr);
+@@ -694,6 +860,41 @@
  	exit(1);
  }
  
@@ -454,18 +438,30 @@ diff -ruN dmenu-orig/dmenu.c dmenu-patched/dmenu.c
  int
  main(int argc, char *argv[])
  {
-@@ -709,6 +905,10 @@
+@@ -709,30 +910,40 @@
  			topbar = 0;
  		else if (!strcmp(argv[i], "-f"))   /* grabs keyboard before reading stdin */
  			fast = 1;
 +		else if (!strcmp(argv[i], "-F"))   /* grabs keyboard before reading stdin */
-+			fuzzy = 0;
++			fuzzy = 1;
 + 		else if (!strcmp(argv[i], "-c"))   /* centers dmenu on screen */
 +			centered = 1;
  		else if (!strcmp(argv[i], "-i")) { /* case-insensitive item matching */
  			fstrncmp = strncasecmp;
  			fstrstr = cistrstr;
-@@ -722,17 +922,19 @@
+ 		} else if (i + 1 == argc)
+ 			usage();
+ 		/* these options take one argument */
+-		else if (!strcmp(argv[i], "-l"))   /* number of lines in vertical list */
++		else if (!strcmp(argv[i], "-g")) {   /* number of columns in grid */
++			columns = atoi(argv[++i]);
++			if (lines == 0) lines = 1;
++		} else if (!strcmp(argv[i], "-l")) { /* number of lines in grid */
+ 			lines = atoi(argv[++i]);
+-		else if (!strcmp(argv[i], "-m"))
++			if (columns == 0) columns = 1;
++		} else if (!strcmp(argv[i], "-m"))
+ 			mon = atoi(argv[++i]);
  		else if (!strcmp(argv[i], "-p"))   /* adds prompt to left of input field */
  			prompt = argv[++i];
  		else if (!strcmp(argv[i], "-fn"))  /* font or font set */
@@ -490,12 +486,9 @@ diff -ruN dmenu-orig/dmenu.c dmenu-patched/dmenu.c
  		else
  			usage();
  
-@@ -746,10 +948,25 @@
- 		parentwin = root;
- 	if (!XGetWindowAttributes(dpy, parentwin, &wa))
+@@ -748,8 +959,23 @@
  		die("could not get embedding window attributes: 0x%lx",
--		    parentwin);
-+			parentwin);
+ 		    parentwin);
  	drw = drw_create(dpy, screen, root, wa.width, wa.height);
 -	if (!drw_fontset_create(drw, fonts, LENGTH(fonts)))
 +	readxresources();
@@ -518,10 +511,3 @@ diff -ruN dmenu-orig/dmenu.c dmenu-patched/dmenu.c
  	lrpad = drw->fonts->h;
  
  #ifdef __OpenBSD__
-diff -ruN dmenu-orig/dmenu_run dmenu-patched/dmenu_run
---- dmenu-orig/dmenu_run	2020-09-02 19:37:07.000000000 +0300
-+++ dmenu-patched/dmenu_run	2020-11-27 10:39:33.378166894 +0300
-@@ -1,2 +1,2 @@
- #!/bin/sh
--dmenu_path | dmenu "$@" | ${SHELL:-"/bin/sh"} &
-+dmenu_path | dmenu -c -F -l 10 -bw 2 -p "run: " "$@" | ${SHELL:-"/bin/sh"} &

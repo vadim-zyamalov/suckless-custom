@@ -1,7 +1,7 @@
 # Template file for 'xdgmenumaker'
 pkgname=xdgmenumaker
 version=1.6
-revision=99
+revision=50
 build_style=gnu-makefile
 depends="python3-xdg python3-gobject gobject-introspection python3-Pillow"
 short_desc="Automatic menu generator for WMs, such as, fluxbox, icewm, jwm, pekwm"
