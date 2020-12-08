@@ -5,12 +5,14 @@ This is my self-made xbps repo of my builds of some suckless tools ([suckless.or
 The main purpose was to have an ability to install custom `dmenu` replacing standard repo version.
 
 Included in the repo are:
+- `bspswallow`, by @JopStro
+    - Just packaged for the ease of installation. Both main and alternative versions included.
+- `dmenu`, ver. 5.0
+- `dmenu_drun`, ver. 1.0(2), by @d9d6ka
+    - My self-written python version of {i3,j4}-dmenu-desktop.
 - `dwm`, ver. 6.2
 - `st`, ver. 0.8.4
-- `dmenu`, ver. 5.0
 - `xdgmenumaker`, ver. 1.6, by @gapan
     - I've allowed IceWM to use svg icons as the version in the standard repo allows it
-- `bspswallow`, by @JopStro
-    - Just packaged for the ease of installation
 
 You should have `Fira Code` and `FiraCode Nerd Font` already installed on your system to use my suckless tools builds.
