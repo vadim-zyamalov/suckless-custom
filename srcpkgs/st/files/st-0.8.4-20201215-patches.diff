@@ -1,20 +1,21 @@
 diff -ruN st-orig/config.def.h st-patched/config.def.h
 --- st-orig/config.def.h	2020-06-19 12:29:45.000000000 +0300
-+++ st-patched/config.def.h	2020-11-24 15:47:25.614748157 +0300
-@@ -6,6 +6,12 @@
++++ st-patched/config.def.h	2020-12-15 08:57:11.417271383 +0300
+@@ -5,7 +5,12 @@
+  *
   * font: see http://freedesktop.org/software/fontconfig/fontconfig-user.html
   */
- static char *font = "Liberation Mono:pixelsize=12:antialias=true:autohint=true";
+-static char *font = "Liberation Mono:pixelsize=12:antialias=true:autohint=true";
++static char *font = "Ubuntu Mono:pixelsize=12:antialias=true:autohint=true";
 +/* Spare fonts */
 +static char *font2[] = {
-+/*	"Inconsolata for Powerline:pixelsize=12:antialias=true:autohint=true", */
-+/*	"Hack Nerd Font Mono:pixelsize=11:antialias=true:autohint=true", */
++	"Ubuntu Nerd Font Mono:pixelsize=12:antialias=true:autohint=true",
 +};
 +
  static int borderpx = 2;
  
  /*
-@@ -93,6 +99,9 @@
+@@ -93,6 +98,9 @@
   */
  unsigned int tabspaces = 8;
  
@@ -24,7 +25,7 @@ diff -ruN st-orig/config.def.h st-patched/config.def.h
  /* Terminal colors (16 first used in escape sequence) */
  static const char *colorname[] = {
  	/* 8 normal colors */
-@@ -120,6 +129,7 @@
+@@ -120,6 +128,7 @@
  	/* more colors can be added after 255 to use with DefaultXX */
  	"#cccccc",
  	"#555555",
@@ -32,7 +33,7 @@ diff -ruN st-orig/config.def.h st-patched/config.def.h
  };
  
  
-@@ -127,10 +137,10 @@
+@@ -127,10 +136,10 @@
   * Default colors (colorname index)
   * foreground, background, cursor, reverse cursor
   */
@@ -47,7 +48,7 @@ diff -ruN st-orig/config.def.h st-patched/config.def.h
  
  /*
   * Default shape of cursor
-@@ -169,11 +179,50 @@
+@@ -169,11 +178,50 @@
  static uint forcemousemod = ShiftMask;
  
  /*
@@ -98,7 +99,7 @@ diff -ruN st-orig/config.def.h st-patched/config.def.h
  	{ XK_ANY_MOD,           Button2, selpaste,       {.i = 0},      1 },
  	{ ShiftMask,            Button4, ttysend,        {.s = "\033[5;2~"} },
  	{ XK_ANY_MOD,           Button4, ttysend,        {.s = "\031"} },
-@@ -199,6 +248,8 @@
+@@ -199,6 +247,8 @@
  	{ TERMMOD,              XK_Y,           selpaste,       {.i =  0} },
  	{ ShiftMask,            XK_Insert,      selpaste,       {.i =  0} },
  	{ TERMMOD,              XK_Num_Lock,    numlock,        {.i =  0} },
@@ -107,9 +108,27 @@ diff -ruN st-orig/config.def.h st-patched/config.def.h
  };
  
  /*
+@@ -276,7 +326,7 @@
+ 	{ XK_KP_Delete,     ControlMask,    "\033[3;5~",    +1,    0},
+ 	{ XK_KP_Delete,     ShiftMask,      "\033[2K",      -1,    0},
+ 	{ XK_KP_Delete,     ShiftMask,      "\033[3;2~",    +1,    0},
+-	{ XK_KP_Delete,     XK_ANY_MOD,     "\033[P",       -1,    0},
++	{ XK_KP_Delete,     XK_ANY_MOD,     "\033[3~",      -1,    0},
+ 	{ XK_KP_Delete,     XK_ANY_MOD,     "\033[3~",      +1,    0},
+ 	{ XK_KP_Multiply,   XK_ANY_MOD,     "\033Oj",       +2,    0},
+ 	{ XK_KP_Add,        XK_ANY_MOD,     "\033Ok",       +2,    0},
+@@ -344,7 +394,7 @@
+ 	{ XK_Delete,        ControlMask,    "\033[3;5~",    +1,    0},
+ 	{ XK_Delete,        ShiftMask,      "\033[2K",      -1,    0},
+ 	{ XK_Delete,        ShiftMask,      "\033[3;2~",    +1,    0},
+-	{ XK_Delete,        XK_ANY_MOD,     "\033[P",       -1,    0},
++	{ XK_Delete,        XK_ANY_MOD,     "\033[3~",      -1,    0},
+ 	{ XK_Delete,        XK_ANY_MOD,     "\033[3~",      +1,    0},
+ 	{ XK_BackSpace,     XK_NO_MOD,      "\177",          0,    0},
+ 	{ XK_BackSpace,     Mod1Mask,       "\033\177",      0,    0},
 diff -ruN st-orig/config.mk st-patched/config.mk
 --- st-orig/config.mk	2020-06-19 12:29:45.000000000 +0300
-+++ st-patched/config.mk	2020-11-24 15:47:17.275748892 +0300
++++ st-patched/config.mk	2020-12-15 08:40:57.243357225 +0300
 @@ -16,7 +16,7 @@
  INCS = -I$(X11INC) \
         `$(PKG_CONFIG) --cflags fontconfig` \
@@ -121,7 +140,7 @@ diff -ruN st-orig/config.mk st-patched/config.mk
  
 diff -ruN st-orig/Makefile st-patched/Makefile
 --- st-orig/Makefile	2020-06-19 12:29:45.000000000 +0300
-+++ st-patched/Makefile	2020-11-24 15:47:17.277748892 +0300
++++ st-patched/Makefile	2020-12-15 08:40:57.245357224 +0300
 @@ -49,9 +49,11 @@
  	chmod 644 $(DESTDIR)$(MANPREFIX)/man1/st.1
  	tic -sx st.info
@@ -136,7 +155,7 @@ diff -ruN st-orig/Makefile st-patched/Makefile
  .PHONY: all options clean dist install uninstall
 diff -ruN st-orig/st.c st-patched/st.c
 --- st-orig/st.c	2020-06-19 12:29:45.000000000 +0300
-+++ st-patched/st.c	2020-11-24 15:47:17.281748891 +0300
++++ st-patched/st.c	2020-12-15 08:40:57.252357224 +0300
 @@ -35,6 +35,7 @@
  #define ESC_ARG_SIZ   16
  #define STR_BUF_SIZ   ESC_BUF_SIZ
@@ -460,7 +479,7 @@ diff -ruN st-orig/st.c st-patched/st.c
  	xfinishdraw();
 diff -ruN st-orig/st.desktop st-patched/st.desktop
 --- st-orig/st.desktop	1970-01-01 03:00:00.000000000 +0300
-+++ st-patched/st.desktop	2020-11-24 15:47:17.283748891 +0300
++++ st-patched/st.desktop	2020-12-15 08:40:57.254357224 +0300
 @@ -0,0 +1,7 @@
 +[Desktop Entry]
 +Type=Application
@@ -471,7 +490,7 @@ diff -ruN st-orig/st.desktop st-patched/st.desktop
 +Categories=System;TerminalEmulator
 diff -ruN st-orig/st.h st-patched/st.h
 --- st-orig/st.h	2020-06-19 12:29:45.000000000 +0300
-+++ st-patched/st.h	2020-11-24 15:47:17.284748891 +0300
++++ st-patched/st.h	2020-12-15 08:40:57.255357223 +0300
 @@ -81,6 +81,8 @@
  void redraw(void);
  void draw(void);
@@ -488,7 +507,7 @@ diff -ruN st-orig/st.h st-patched/st.h
 +extern float alpha;
 diff -ruN st-orig/x.c st-patched/x.c
 --- st-orig/x.c	2020-06-19 12:29:45.000000000 +0300
-+++ st-patched/x.c	2020-11-24 15:47:25.618748157 +0300
++++ st-patched/x.c	2020-12-15 08:40:57.260357223 +0300
 @@ -14,6 +14,7 @@
  #include <X11/keysym.h>
  #include <X11/Xft/Xft.h>
