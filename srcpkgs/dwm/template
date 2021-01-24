@@ -1,7 +1,7 @@
 # Template file for 'dwm'
 pkgname=dwm
 version=6.2
-revision=51
+revision=52
 makedepends="libX11-devel libXinerama-devel libXft-devel freetype-devel"
 short_desc="Dynamic window manager for X"
 maintainer="Vadim Zyamalov <vadim.zyamalov@gmail.com>"

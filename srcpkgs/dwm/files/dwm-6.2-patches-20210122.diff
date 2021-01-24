@@ -392,7 +392,7 @@ diff -ruN orig/dwm.1 patched/dwm.1
  .BR st (1)
 diff -ruN orig/dwm.c patched/dwm.c
 --- orig/dwm.c	2019-02-02 15:55:28.000000000 +0300
-+++ patched/dwm.c	2021-01-22 09:54:50.079234413 +0300
++++ patched/dwm.c	2021-01-24 09:28:25.914269896 +0300
 @@ -29,6 +29,7 @@
  #include <string.h>
  #include <unistd.h>
@@ -415,9 +415,12 @@ diff -ruN orig/dwm.c patched/dwm.c
  
  #include "drw.h"
  #include "util.h"
-@@ -50,19 +54,38 @@
+@@ -48,24 +52,43 @@
+ #define BUTTONMASK              (ButtonPressMask|ButtonReleaseMask)
+ #define CLEANMASK(mask)         (mask & ~(numlockmask|LockMask) & (ShiftMask|ControlMask|Mod1Mask|Mod2Mask|Mod3Mask|Mod4Mask|Mod5Mask))
  #define INTERSECT(x,y,w,h,m)    (MAX(0, MIN((x)+(w),(m)->wx+(m)->ww) - MAX((x),(m)->wx)) \
-                                * MAX(0, MIN((y)+(h),(m)->wy+(m)->wh) - MAX((y),(m)->wy)))
+-                               * MAX(0, MIN((y)+(h),(m)->wy+(m)->wh) - MAX((y),(m)->wy)))
++							   * MAX(0, MIN((y)+(h),(m)->wy+(m)->wh) - MAX((y),(m)->wy)))
  #define ISVISIBLE(C)            ((C->tags & C->mon->tagset[C->mon->seltags]))
 +#define HIDDEN(C)               ((getstate(C->win) == IconicState))
  #define LENGTH(X)               (sizeof X / sizeof X[0])
@@ -450,13 +453,19 @@ diff -ruN orig/dwm.c patched/dwm.c
 -enum { SchemeNorm, SchemeSel }; /* color schemes */
 +enum { SchemeNorm, SchemeSel, SchemeHid }; /* color schemes */
  enum { NetSupported, NetWMName, NetWMState, NetWMCheck,
-+       NetSystemTray, NetSystemTrayOP, NetSystemTrayOrientation, NetSystemTrayOrientationHorz,
-        NetWMFullscreen, NetActiveWindow, NetWMWindowType,
-        NetWMWindowTypeDialog, NetClientList, NetLast }; /* EWMH atoms */
+-       NetWMFullscreen, NetActiveWindow, NetWMWindowType,
+-       NetWMWindowTypeDialog, NetClientList, NetLast }; /* EWMH atoms */
++	   NetSystemTray, NetSystemTrayOP, NetSystemTrayOrientation, NetSystemTrayOrientationHorz,
++	   NetWMFullscreen, NetActiveWindow, NetWMWindowType,
++	   NetWMWindowTypeDialog, NetClientList, NetLast }; /* EWMH atoms */
 +enum { Manager, Xembed, XembedInfo, XLast }; /* Xembed atoms */
  enum { WMProtocols, WMDelete, WMState, WMTakeFocus, WMLast }; /* default atoms */
  enum { ClkTagBar, ClkLtSymbol, ClkStatusText, ClkWinTitle,
-        ClkClientWin, ClkRootWin, ClkLast }; /* clicks */
+-       ClkClientWin, ClkRootWin, ClkLast }; /* clicks */
++	   ClkClientWin, ClkRootWin, ClkLast }; /* clicks */
+ 
+ typedef union {
+ 	int i;
 @@ -92,9 +115,11 @@
  	int basew, baseh, incw, inch, maxw, maxh, minw, minh;
  	int bw, oldbw;
@@ -779,7 +788,7 @@ diff -ruN orig/dwm.c patched/dwm.c
  	Arg arg = {0};
  	Client *c;
  	Monitor *m;
-@@ -431,18 +600,55 @@
+@@ -431,18 +600,57 @@
  	}
  	if (ev->window == selmon->barwin) {
  		i = x = 0;
@@ -833,14 +842,16 @@ diff -ruN orig/dwm.c patched/dwm.c
 +						x += (1.0 / (double)m->bt) * m->btw;
 +				} while (ev->x > x && (c = c->next));
 +
-+				click = ClkWinTitle;
-+				arg.v = c;
++				if (c) {
++					click = ClkWinTitle;
++					arg.v = c;
++				}
 +			}
 +		}
  	} else if ((c = wintoclient(ev->window))) {
  		focus(c);
  		restack(selmon);
-@@ -452,7 +658,7 @@
+@@ -452,7 +660,7 @@
  	for (i = 0; i < LENGTH(buttons); i++)
  		if (click == buttons[i].click && buttons[i].func && buttons[i].button == ev->button
  		&& CLEANMASK(buttons[i].mask) == CLEANMASK(ev->state))
@@ -849,7 +860,7 @@ diff -ruN orig/dwm.c patched/dwm.c
  }
  
  void
-@@ -482,6 +688,11 @@
+@@ -482,6 +690,11 @@
  	XUngrabKey(dpy, AnyKey, AnyModifier, root);
  	while (mons)
  		cleanupmon(mons);
@@ -861,7 +872,7 @@ diff -ruN orig/dwm.c patched/dwm.c
  	for (i = 0; i < CurLast; i++)
  		drw_cur_free(drw, cursor[i]);
  	for (i = 0; i < LENGTH(colors); i++)
-@@ -512,9 +723,57 @@
+@@ -512,9 +725,57 @@
  void
  clientmessage(XEvent *e)
  {
@@ -919,7 +930,7 @@ diff -ruN orig/dwm.c patched/dwm.c
  	if (!c)
  		return;
  	if (cme->message_type == netatom[NetWMState]) {
-@@ -567,7 +826,7 @@
+@@ -567,7 +828,7 @@
  				for (c = m->clients; c; c = c->next)
  					if (c->isfullscreen)
  						resizeclient(c, m->mx, m->my, m->mw, m->mh);
@@ -928,7 +939,7 @@ diff -ruN orig/dwm.c patched/dwm.c
  			}
  			focus(NULL);
  			arrange(NULL);
-@@ -627,10 +886,24 @@
+@@ -627,10 +888,24 @@
  	XSync(dpy, False);
  }
  
@@ -953,7 +964,7 @@ diff -ruN orig/dwm.c patched/dwm.c
  
  	m = ecalloc(1, sizeof(Monitor));
  	m->tagset[0] = m->tagset[1] = 1;
-@@ -641,10 +914,41 @@
+@@ -641,10 +916,41 @@
  	m->lt[0] = &layouts[0];
  	m->lt[1] = &layouts[1 % LENGTH(layouts)];
  	strncpy(m->ltsymbol, layouts[0].symbol, sizeof m->ltsymbol);
@@ -995,7 +1006,7 @@ diff -ruN orig/dwm.c patched/dwm.c
  destroynotify(XEvent *e)
  {
  	Client *c;
-@@ -652,6 +956,13 @@
+@@ -652,6 +958,13 @@
  
  	if ((c = wintoclient(ev->window)))
  		unmanage(c, 1);
@@ -1009,7 +1020,7 @@ diff -ruN orig/dwm.c patched/dwm.c
  }
  
  void
-@@ -695,51 +1006,76 @@
+@@ -695,51 +1008,76 @@
  void
  drawbar(Monitor *m)
  {
@@ -1103,7 +1114,7 @@ diff -ruN orig/dwm.c patched/dwm.c
  }
  
  void
-@@ -752,6 +1088,28 @@
+@@ -752,6 +1090,28 @@
  }
  
  void
@@ -1132,7 +1143,7 @@ diff -ruN orig/dwm.c patched/dwm.c
  enternotify(XEvent *e)
  {
  	Client *c;
-@@ -776,17 +1134,28 @@
+@@ -776,17 +1136,28 @@
  	Monitor *m;
  	XExposeEvent *ev = &e->xexpose;
  
@@ -1164,7 +1175,7 @@ diff -ruN orig/dwm.c patched/dwm.c
  	if (c) {
  		if (c->mon != selmon)
  			selmon = c->mon;
-@@ -830,28 +1199,57 @@
+@@ -830,28 +1201,57 @@
  }
  
  void
@@ -1231,7 +1242,7 @@ diff -ruN orig/dwm.c patched/dwm.c
  	}
  }
  
-@@ -862,16 +1260,35 @@
+@@ -862,16 +1262,35 @@
  	unsigned long dl;
  	unsigned char *p = NULL;
  	Atom da, atom = None;
@@ -1268,7 +1279,7 @@ diff -ruN orig/dwm.c patched/dwm.c
  getrootptr(int *x, int *y)
  {
  	int di;
-@@ -899,6 +1316,16 @@
+@@ -899,6 +1318,16 @@
  	return result;
  }
  
@@ -1285,7 +1296,7 @@ diff -ruN orig/dwm.c patched/dwm.c
  int
  gettextprop(Window w, Atom atom, char *text, unsigned int size)
  {
-@@ -964,9 +1391,39 @@
+@@ -964,9 +1393,39 @@
  }
  
  void
@@ -1326,7 +1337,7 @@ diff -ruN orig/dwm.c patched/dwm.c
  	arrange(selmon);
  }
  
-@@ -1003,7 +1460,7 @@
+@@ -1003,7 +1462,7 @@
  {
  	if (!selmon->sel)
  		return;
@@ -1335,7 +1346,7 @@ diff -ruN orig/dwm.c patched/dwm.c
  		XGrabServer(dpy);
  		XSetErrorHandler(xerrordummy);
  		XSetCloseDownMode(dpy, DestroyAll);
-@@ -1017,12 +1474,13 @@
+@@ -1017,12 +1476,13 @@
  void
  manage(Window w, XWindowAttributes *wa)
  {
@@ -1350,7 +1361,7 @@ diff -ruN orig/dwm.c patched/dwm.c
  	/* geometry */
  	c->x = c->oldx = wa->x;
  	c->y = c->oldy = wa->y;
-@@ -1037,6 +1495,7 @@
+@@ -1037,6 +1497,7 @@
  	} else {
  		c->mon = selmon;
  		applyrules(c);
@@ -1358,7 +1369,7 @@ diff -ruN orig/dwm.c patched/dwm.c
  	}
  
  	if (c->x + WIDTH(c) > c->mon->mx + c->mon->mw)
-@@ -1056,6 +1515,10 @@
+@@ -1056,6 +1517,10 @@
  	updatewindowtype(c);
  	updatesizehints(c);
  	updatewmhints(c);
@@ -1369,7 +1380,7 @@ diff -ruN orig/dwm.c patched/dwm.c
  	XSelectInput(dpy, w, EnterWindowMask|FocusChangeMask|PropertyChangeMask|StructureNotifyMask);
  	grabbuttons(c, 0);
  	if (!c->isfloating)
-@@ -1067,13 +1530,17 @@
+@@ -1067,13 +1532,17 @@
  	XChangeProperty(dpy, root, netatom[NetClientList], XA_WINDOW, 32, PropModeAppend,
  		(unsigned char *) &(c->win), 1);
  	XMoveResizeWindow(dpy, c->win, c->x + 2 * sw, c->y, c->w, c->h); /* some windows require this */
@@ -1390,7 +1401,7 @@ diff -ruN orig/dwm.c patched/dwm.c
  }
  
  void
-@@ -1091,6 +1558,12 @@
+@@ -1091,6 +1560,12 @@
  {
  	static XWindowAttributes wa;
  	XMapRequestEvent *ev = &e->xmaprequest;
@@ -1403,7 +1414,7 @@ diff -ruN orig/dwm.c patched/dwm.c
  
  	if (!XGetWindowAttributes(dpy, ev->window, &wa))
  		return;
-@@ -1195,7 +1668,7 @@
+@@ -1195,7 +1670,7 @@
  Client *
  nexttiled(Client *c)
  {
@@ -1412,7 +1423,7 @@ diff -ruN orig/dwm.c patched/dwm.c
  	return c;
  }
  
-@@ -1215,6 +1688,16 @@
+@@ -1215,6 +1690,16 @@
  	Window trans;
  	XPropertyEvent *ev = &e->xproperty;
  
@@ -1429,7 +1440,7 @@ diff -ruN orig/dwm.c patched/dwm.c
  	if ((ev->window == root) && (ev->atom == XA_WM_NAME))
  		updatestatus();
  	else if (ev->state == PropertyDelete)
-@@ -1248,6 +1731,17 @@
+@@ -1248,6 +1733,17 @@
  void
  quit(const Arg *arg)
  {
@@ -1447,7 +1458,7 @@ diff -ruN orig/dwm.c patched/dwm.c
  	running = 0;
  }
  
-@@ -1266,6 +1760,20 @@
+@@ -1266,6 +1762,20 @@
  }
  
  void
@@ -1468,7 +1479,7 @@ diff -ruN orig/dwm.c patched/dwm.c
  resize(Client *c, int x, int y, int w, int h, int interact)
  {
  	if (applysizehints(c, &x, &y, &w, &h, interact))
-@@ -1273,15 +1781,47 @@
+@@ -1273,15 +1783,47 @@
  }
  
  void
@@ -1520,7 +1531,7 @@ diff -ruN orig/dwm.c patched/dwm.c
  	XConfigureWindow(dpy, c->win, CWX|CWY|CWWidth|CWHeight|CWBorderWidth, &wc);
  	configure(c);
  	XSync(dpy, False);
-@@ -1345,6 +1885,19 @@
+@@ -1345,6 +1887,19 @@
  }
  
  void
@@ -1540,7 +1551,7 @@ diff -ruN orig/dwm.c patched/dwm.c
  restack(Monitor *m)
  {
  	Client *c;
-@@ -1370,6 +1923,38 @@
+@@ -1370,6 +1925,38 @@
  }
  
  void
@@ -1579,7 +1590,7 @@ diff -ruN orig/dwm.c patched/dwm.c
  run(void)
  {
  	XEvent ev;
-@@ -1381,9 +1966,88 @@
+@@ -1381,9 +1968,88 @@
  }
  
  void
@@ -1610,7 +1621,7 @@ diff -ruN orig/dwm.c patched/dwm.c
 +	} else {
 +		/* space for path segments, separators and nul */
 +		pathpfx = ecalloc(1, strlen(home) + strlen(localconfig)
-+		                     + strlen(dwmdir) + 3);
++							 + strlen(dwmdir) + 3);
 +
 +		if (sprintf(pathpfx, "%s/%s/%s", home, localconfig, dwmdir) < 0) {
 +			free(pathpfx);
@@ -1668,7 +1679,7 @@ diff -ruN orig/dwm.c patched/dwm.c
  	Window d1, d2, *wins = NULL;
  	XWindowAttributes wa;
  
-@@ -1394,6 +2058,8 @@
+@@ -1394,6 +2060,8 @@
  				continue;
  			if (wa.map_state == IsViewable || getstate(wins[i]) == IconicState)
  				manage(wins[i], &wa);
@@ -1677,7 +1688,7 @@ diff -ruN orig/dwm.c patched/dwm.c
  		}
  		for (i = 0; i < num; i++) { /* now the transients */
  			if (!XGetWindowAttributes(dpy, wins[i], &wa))
-@@ -1405,6 +2071,7 @@
+@@ -1405,6 +2073,7 @@
  		if (wins)
  			XFree(wins);
  	}
@@ -1685,7 +1696,7 @@ diff -ruN orig/dwm.c patched/dwm.c
  }
  
  void
-@@ -1433,26 +2100,36 @@
+@@ -1433,26 +2102,36 @@
  }
  
  int
@@ -1733,7 +1744,7 @@ diff -ruN orig/dwm.c patched/dwm.c
  	}
  	return exists;
  }
-@@ -1466,7 +2143,7 @@
+@@ -1466,7 +2145,7 @@
  			XA_WINDOW, 32, PropModeReplace,
  			(unsigned char *) &(c->win), 1);
  	}
@@ -1742,7 +1753,7 @@ diff -ruN orig/dwm.c patched/dwm.c
  }
  
  void
-@@ -1501,9 +2178,9 @@
+@@ -1501,9 +2180,9 @@
  setlayout(const Arg *arg)
  {
  	if (!arg || !arg->v || arg->v != selmon->lt[selmon->sellt])
@@ -1754,7 +1765,7 @@ diff -ruN orig/dwm.c patched/dwm.c
  	strncpy(selmon->ltsymbol, selmon->lt[selmon->sellt]->symbol, sizeof selmon->ltsymbol);
  	if (selmon->sel)
  		arrange(selmon);
-@@ -1522,7 +2199,7 @@
+@@ -1522,7 +2201,7 @@
  	f = arg->f < 1.0 ? arg->f + selmon->mfact : arg->f - 1.0;
  	if (f < 0.1 || f > 0.9)
  		return;
@@ -1763,7 +1774,7 @@ diff -ruN orig/dwm.c patched/dwm.c
  	arrange(selmon);
  }
  
-@@ -1536,6 +2213,9 @@
+@@ -1536,6 +2215,9 @@
  	/* clean up any zombies immediately */
  	sigchld(0);
  
@@ -1773,7 +1784,7 @@ diff -ruN orig/dwm.c patched/dwm.c
  	/* init screen */
  	screen = DefaultScreen(dpy);
  	sw = DisplayWidth(dpy, screen);
-@@ -1555,6 +2235,10 @@
+@@ -1555,6 +2237,10 @@
  	wmatom[WMTakeFocus] = XInternAtom(dpy, "WM_TAKE_FOCUS", False);
  	netatom[NetActiveWindow] = XInternAtom(dpy, "_NET_ACTIVE_WINDOW", False);
  	netatom[NetSupported] = XInternAtom(dpy, "_NET_SUPPORTED", False);
@@ -1784,7 +1795,7 @@ diff -ruN orig/dwm.c patched/dwm.c
  	netatom[NetWMName] = XInternAtom(dpy, "_NET_WM_NAME", False);
  	netatom[NetWMState] = XInternAtom(dpy, "_NET_WM_STATE", False);
  	netatom[NetWMCheck] = XInternAtom(dpy, "_NET_SUPPORTING_WM_CHECK", False);
-@@ -1562,6 +2246,9 @@
+@@ -1562,6 +2248,9 @@
  	netatom[NetWMWindowType] = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE", False);
  	netatom[NetWMWindowTypeDialog] = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE_DIALOG", False);
  	netatom[NetClientList] = XInternAtom(dpy, "_NET_CLIENT_LIST", False);
@@ -1794,7 +1805,7 @@ diff -ruN orig/dwm.c patched/dwm.c
  	/* init cursors */
  	cursor[CurNormal] = drw_cur_create(drw, XC_left_ptr);
  	cursor[CurResize] = drw_cur_create(drw, XC_sizing);
-@@ -1570,6 +2257,8 @@
+@@ -1570,6 +2259,8 @@
  	scheme = ecalloc(LENGTH(colors), sizeof(Clr *));
  	for (i = 0; i < LENGTH(colors); i++)
  		scheme[i] = drw_scm_create(drw, colors[i], 3);
@@ -1803,7 +1814,7 @@ diff -ruN orig/dwm.c patched/dwm.c
  	/* init bars */
  	updatebars();
  	updatestatus();
-@@ -1611,6 +2300,25 @@
+@@ -1611,6 +2302,25 @@
  }
  
  void
@@ -1829,7 +1840,7 @@ diff -ruN orig/dwm.c patched/dwm.c
  showhide(Client *c)
  {
  	if (!c)
-@@ -1637,10 +2345,39 @@
+@@ -1637,10 +2347,39 @@
  }
  
  void
@@ -1871,7 +1882,7 @@ diff -ruN orig/dwm.c patched/dwm.c
  	if (fork() == 0) {
  		if (dpy)
  			close(ConnectionNumber(dpy));
-@@ -1699,9 +2436,20 @@
+@@ -1699,9 +2438,20 @@
  void
  togglebar(const Arg *arg)
  {
@@ -1894,7 +1905,7 @@ diff -ruN orig/dwm.c patched/dwm.c
  	arrange(selmon);
  }
  
-@@ -1724,7 +2472,7 @@
+@@ -1724,7 +2474,7 @@
  {
  	unsigned int newtags;
  
@@ -1903,7 +1914,7 @@ diff -ruN orig/dwm.c patched/dwm.c
  		return;
  	newtags = selmon->sel->tags ^ (arg->ui & TAGMASK);
  	if (newtags) {
-@@ -1738,15 +2486,56 @@
+@@ -1738,15 +2488,56 @@
  toggleview(const Arg *arg)
  {
  	unsigned int newtagset = selmon->tagset[selmon->seltags] ^ (arg->ui & TAGMASK);
@@ -1960,7 +1971,7 @@ diff -ruN orig/dwm.c patched/dwm.c
  unfocus(Client *c, int setfocus)
  {
  	if (!c)
-@@ -1765,6 +2554,20 @@
+@@ -1765,6 +2556,20 @@
  	Monitor *m = c->mon;
  	XWindowChanges wc;
  
@@ -1981,7 +1992,7 @@ diff -ruN orig/dwm.c patched/dwm.c
  	detach(c);
  	detachstack(c);
  	if (!destroyed) {
-@@ -1779,9 +2582,12 @@
+@@ -1779,9 +2584,12 @@
  		XUngrabServer(dpy);
  	}
  	free(c);
@@ -1997,7 +2008,7 @@ diff -ruN orig/dwm.c patched/dwm.c
  }
  
  void
-@@ -1796,11 +2602,18 @@
+@@ -1796,11 +2604,18 @@
  		else
  			unmanage(c, 0);
  	}
@@ -2016,7 +2027,7 @@ diff -ruN orig/dwm.c patched/dwm.c
  	Monitor *m;
  	XSetWindowAttributes wa = {
  		.override_redirect = True,
-@@ -1811,10 +2624,15 @@
+@@ -1811,10 +2626,15 @@
  	for (m = mons; m; m = m->next) {
  		if (m->barwin)
  			continue;
@@ -2033,7 +2044,7 @@ diff -ruN orig/dwm.c patched/dwm.c
  		XMapRaised(dpy, m->barwin);
  		XSetClassHint(dpy, m->barwin, &ch);
  	}
-@@ -1987,9 +2805,126 @@
+@@ -1987,9 +2807,126 @@
  void
  updatestatus(void)
  {
@@ -2161,7 +2172,7 @@ diff -ruN orig/dwm.c patched/dwm.c
  }
  
  void
-@@ -2009,8 +2944,10 @@
+@@ -2009,8 +2946,10 @@
  
  	if (state == netatom[NetWMFullscreen])
  		setfullscreen(c, 1);
@@ -2173,7 +2184,7 @@ diff -ruN orig/dwm.c patched/dwm.c
  }
  
  void
-@@ -2035,15 +2972,145 @@
+@@ -2035,15 +2974,145 @@
  void
  view(const Arg *arg)
  {
@@ -2320,7 +2331,7 @@ diff -ruN orig/dwm.c patched/dwm.c
  Client *
  wintoclient(Window w)
  {
-@@ -2057,6 +3124,16 @@
+@@ -2057,6 +3126,16 @@
  	return NULL;
  }
  
@@ -2337,7 +2348,7 @@ diff -ruN orig/dwm.c patched/dwm.c
  Monitor *
  wintomon(Window w)
  {
-@@ -2110,6 +3187,22 @@
+@@ -2110,6 +3189,22 @@
  	return -1;
  }
  
@@ -2360,7 +2371,7 @@ diff -ruN orig/dwm.c patched/dwm.c
  void
  zoom(const Arg *arg)
  {
-@@ -2124,6 +3217,60 @@
+@@ -2124,6 +3219,60 @@
  	pop(c);
  }
  
@@ -2421,7 +2432,7 @@ diff -ruN orig/dwm.c patched/dwm.c
  int
  main(int argc, char *argv[])
  {
-@@ -2135,14 +3282,20 @@
+@@ -2135,14 +3284,20 @@
  		fputs("warning: no locale support\n", stderr);
  	if (!(dpy = XOpenDisplay(NULL)))
  		die("dwm: cannot open display");
