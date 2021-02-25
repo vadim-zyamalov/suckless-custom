@@ -1,14 +1,14 @@
 # Template file for 'dmenu_drun'
 pkgname=dmenu_drun
 version=1.0
-revision=4
+revision=5
 depends="dmenu python3-xdg"
 short_desc="Python script similar to dmenu_run but for .desktop files"
 maintainer="Vadim Zyamalov <vadim.zyamalov@gmail.com>"
 license="MIT"
 homepage="https://github.com/d9d6ka/dmenu_drun"
 distfiles="https://github.com/d9d6ka/${pkgname}/archive/master.tar.gz>${pkgname}-${version}.tar.gz"
-checksum=059b4928d7ee6af538ee3372f0f0bed738e85a65e505a18d367807a55396be26
+checksum=042030f88bf88d305e68ca58ec5510c7a2f40f347240a3a8e17a7af3cab28eb0
 wrksrc="dmenu_drun-master"
 
 do_install() {
