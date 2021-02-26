@@ -1,6 +1,6 @@
-diff -ruN dmenu-orig/config.def.h dmenu-patched/config.def.h
---- dmenu-orig/config.def.h	2020-09-02 19:37:07.000000000 +0300
-+++ dmenu-patched/config.def.h	2020-12-05 09:04:40.401305321 +0300
+diff -ruN orig/config.def.h patched/config.def.h
+--- orig/config.def.h	2020-09-02 19:37:07.000000000 +0300
++++ patched/config.def.h	2021-02-26 06:46:22.902028140 +0300
 @@ -2,6 +2,9 @@
  /* Default settings; can be overriden by command line. */
  
@@ -32,9 +32,9 @@ diff -ruN dmenu-orig/config.def.h dmenu-patched/config.def.h
 +
 +/* Size of the window border */
 +static unsigned int border_width = 0;
-diff -ruN dmenu-orig/config.mk dmenu-patched/config.mk
---- dmenu-orig/config.mk	2020-09-02 19:37:07.000000000 +0300
-+++ dmenu-patched/config.mk	2020-12-05 08:59:53.647330589 +0300
+diff -ruN orig/config.mk patched/config.mk
+--- orig/config.mk	2020-09-02 19:37:07.000000000 +0300
++++ patched/config.mk	2021-02-26 06:46:22.904028140 +0300
 @@ -20,7 +20,7 @@
  
  # includes and libs
@@ -44,9 +44,9 @@ diff -ruN dmenu-orig/config.mk dmenu-patched/config.mk
  
  # flags
  CPPFLAGS = -D_DEFAULT_SOURCE -D_BSD_SOURCE -D_XOPEN_SOURCE=700 -D_POSIX_C_SOURCE=200809L -DVERSION=\"$(VERSION)\" $(XINERAMAFLAGS)
-diff -ruN dmenu-orig/dmenu.1 dmenu-patched/dmenu.1
---- dmenu-orig/dmenu.1	2020-09-02 19:37:07.000000000 +0300
-+++ dmenu-patched/dmenu.1	2020-12-05 08:59:21.250333444 +0300
+diff -ruN orig/dmenu.1 patched/dmenu.1
+--- orig/dmenu.1	2020-09-02 19:37:07.000000000 +0300
++++ patched/dmenu.1	2021-02-26 06:46:22.906028140 +0300
 @@ -4,6 +4,8 @@
  .SH SYNOPSIS
  .B dmenu
@@ -79,10 +79,10 @@ diff -ruN dmenu-orig/dmenu.1 dmenu-patched/dmenu.1
  .TP
  .BI \-m " monitor"
  dmenu is displayed on the monitor number supplied. Monitor numbers are starting
-diff -ruN dmenu-orig/dmenu.c dmenu-patched/dmenu.c
---- dmenu-orig/dmenu.c	2020-09-02 19:37:07.000000000 +0300
-+++ dmenu-patched/dmenu.c	2020-12-05 09:04:40.404305321 +0300
-@@ -1,6 +1,7 @@
+diff -ruN orig/dmenu.c patched/dmenu.c
+--- orig/dmenu.c	2020-09-02 19:37:07.000000000 +0300
++++ patched/dmenu.c	2021-02-26 06:46:41.645028908 +0300
+@@ -1,12 +1,14 @@
  /* See LICENSE file for copyright and license details. */
  #include <ctype.h>
  #include <locale.h>
@@ -90,7 +90,14 @@ diff -ruN dmenu-orig/dmenu.c dmenu-patched/dmenu.c
  #include <stdio.h>
  #include <stdlib.h>
  #include <string.h>
-@@ -15,6 +16,7 @@
+ #include <strings.h>
+ #include <time.h>
+ #include <unistd.h>
++#include <stdbool.h>
+ 
+ #include <X11/Xlib.h>
+ #include <X11/Xatom.h>
+@@ -15,6 +17,7 @@
  #include <X11/extensions/Xinerama.h>
  #endif
  #include <X11/Xft/Xft.h>
@@ -98,7 +105,7 @@ diff -ruN dmenu-orig/dmenu.c dmenu-patched/dmenu.c
  
  #include "drw.h"
  #include "util.h"
-@@ -26,12 +28,13 @@
+@@ -26,12 +29,13 @@
  #define TEXTW(X)              (drw_fontset_getwidth(drw, (X)) + lrpad)
  
  /* enums */
@@ -113,7 +120,7 @@ diff -ruN dmenu-orig/dmenu.c dmenu-patched/dmenu.c
  };
  
  static char text[BUFSIZ] = "";
-@@ -53,6 +56,10 @@
+@@ -53,6 +57,10 @@
  static Drw *drw;
  static Clr *scheme[SchemeLast];
  
@@ -124,7 +131,7 @@ diff -ruN dmenu-orig/dmenu.c dmenu-patched/dmenu.c
  #include "config.h"
  
  static int (*fstrncmp)(const char *, const char *, size_t) = strncmp;
-@@ -77,7 +84,7 @@
+@@ -77,7 +85,7 @@
  	int i, n;
  
  	if (lines > 0)
@@ -133,7 +140,7 @@ diff -ruN dmenu-orig/dmenu.c dmenu-patched/dmenu.c
  	else
  		n = mw - (promptw + inputw + TEXTW("<") + TEXTW(">"));
  	/* calculate which items will begin the next page and previous page */
-@@ -89,6 +96,15 @@
+@@ -89,6 +97,15 @@
  			break;
  }
  
@@ -149,7 +156,7 @@ diff -ruN dmenu-orig/dmenu.c dmenu-patched/dmenu.c
  static void
  cleanup(void)
  {
-@@ -113,6 +129,42 @@
+@@ -113,6 +130,42 @@
  	return NULL;
  }
  
@@ -192,7 +199,7 @@ diff -ruN dmenu-orig/dmenu.c dmenu-patched/dmenu.c
  static int
  drawitem(struct item *item, int x, int y, int w)
  {
-@@ -123,7 +175,9 @@
+@@ -123,7 +176,9 @@
  	else
  		drw_setscheme(drw, scheme[SchemeNorm]);
  
@@ -203,7 +210,7 @@ diff -ruN dmenu-orig/dmenu.c dmenu-patched/dmenu.c
  }
  
  static void
-@@ -152,9 +206,15 @@
+@@ -152,9 +207,15 @@
  	}
  
  	if (lines > 0) {
@@ -222,7 +229,7 @@ diff -ruN dmenu-orig/dmenu.c dmenu-patched/dmenu.c
  	} else if (matches) {
  		/* draw horizontal list */
  		x += inputw;
-@@ -210,9 +270,94 @@
+@@ -210,9 +271,94 @@
  	die("cannot grab keyboard");
  }
  
@@ -317,7 +324,67 @@ diff -ruN dmenu-orig/dmenu.c dmenu-patched/dmenu.c
  	static char **tokv = NULL;
  	static int tokn = 0;
  
-@@ -601,8 +746,13 @@
+@@ -311,6 +457,9 @@
+ 	int len;
+ 	KeySym ksym;
+ 	Status status;
++	int i;
++	struct item *tmpsel;
++	bool offscreen = false;
+ 
+ 	len = XmbLookupString(xic, ev, buf, sizeof buf, &ksym, &status);
+ 	switch (status) {
+@@ -437,6 +586,24 @@
+ 		calcoffsets();
+ 		break;
+ 	case XK_Left:
++		if (columns > 1) {
++			if (!sel)
++				return;
++			tmpsel = sel;
++			for (i = 0; i < lines; i++) {
++				if (!tmpsel->left ||  tmpsel->left->right != tmpsel)
++					return;
++				if (tmpsel == curr)
++					offscreen = true;
++				tmpsel = tmpsel->left;
++			}
++			sel = tmpsel;
++			if (offscreen) {
++				curr = prev;
++				calcoffsets();
++			}
++			break;
++		}
+ 		if (cursor > 0 && (!sel || !sel->left || lines > 0)) {
+ 			cursor = nextrune(-1);
+ 			break;
+@@ -473,6 +640,24 @@
+ 			sel->out = 1;
+ 		break;
+ 	case XK_Right:
++		if (columns > 1) {
++			if (!sel)
++				return;
++			tmpsel = sel;
++			for (i = 0; i < lines; i++) {
++				if (!tmpsel->right ||  tmpsel->right->left != tmpsel)
++					return;
++				tmpsel = tmpsel->right;
++				if (tmpsel == next)
++					offscreen = true;
++			}
++			sel = tmpsel;
++			if (offscreen) {
++				curr = next;
++				calcoffsets();
++			}
++			break;
++		}
+ 		if (text[cursor] != '\0') {
+ 			cursor = nextrune(+1);
+ 			break;
+@@ -601,8 +786,13 @@
  	int a, di, n, area = 0;
  #endif
  	/* init appearance */
@@ -333,7 +400,7 @@ diff -ruN dmenu-orig/dmenu.c dmenu-patched/dmenu.c
  
  	clip = XInternAtom(dpy, "CLIPBOARD",   False);
  	utf8 = XInternAtom(dpy, "UTF8_STRING", False);
-@@ -611,6 +761,7 @@
+@@ -611,6 +801,7 @@
  	bh = drw->fonts->h + 2;
  	lines = MAX(lines, 0);
  	mh = (lines + 1) * bh;
@@ -341,7 +408,7 @@ diff -ruN dmenu-orig/dmenu.c dmenu-patched/dmenu.c
  #ifdef XINERAMA
  	i = 0;
  	if (parentwin == root && (info = XineramaQueryScreens(dpy, &n))) {
-@@ -637,9 +788,16 @@
+@@ -637,9 +828,16 @@
  				if (INTERSECT(x, y, 1, 1, info[i]))
  					break;
  
@@ -361,7 +428,7 @@ diff -ruN dmenu-orig/dmenu.c dmenu-patched/dmenu.c
  		XFree(info);
  	} else
  #endif
-@@ -647,11 +805,17 @@
+@@ -647,11 +845,17 @@
  		if (!XGetWindowAttributes(dpy, parentwin, &wa))
  			die("could not get embedding window attributes: 0x%lx",
  			    parentwin);
@@ -383,7 +450,7 @@ diff -ruN dmenu-orig/dmenu.c dmenu-patched/dmenu.c
  	inputw = MIN(inputw, mw/3);
  	match();
  
-@@ -659,9 +823,11 @@
+@@ -659,9 +863,11 @@
  	swa.override_redirect = True;
  	swa.background_pixel = scheme[SchemeNorm][ColBg].pixel;
  	swa.event_mask = ExposureMask | KeyPressMask | VisibilityChangeMask;
@@ -396,7 +463,7 @@ diff -ruN dmenu-orig/dmenu.c dmenu-patched/dmenu.c
  	XSetClassHint(dpy, win, &ch);
  
  
-@@ -694,6 +860,41 @@
+@@ -694,6 +900,41 @@
  	exit(1);
  }
  
@@ -438,7 +505,7 @@ diff -ruN dmenu-orig/dmenu.c dmenu-patched/dmenu.c
  int
  main(int argc, char *argv[])
  {
-@@ -709,30 +910,40 @@
+@@ -709,30 +950,40 @@
  			topbar = 0;
  		else if (!strcmp(argv[i], "-f"))   /* grabs keyboard before reading stdin */
  			fast = 1;
@@ -486,7 +553,7 @@ diff -ruN dmenu-orig/dmenu.c dmenu-patched/dmenu.c
  		else
  			usage();
  
-@@ -748,8 +959,23 @@
+@@ -748,8 +999,23 @@
  		die("could not get embedding window attributes: 0x%lx",
  		    parentwin);
  	drw = drw_create(dpy, screen, root, wa.width, wa.height);
