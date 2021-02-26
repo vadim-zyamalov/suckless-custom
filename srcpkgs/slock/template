@@ -1,0 +1,32 @@
+# Template file for 'slock'
+pkgname=slock
+version=1.4
+revision=50
+hostmakedepends="pkg-config"
+makedepends="libXrandr-devel libXinerama-devel imlib2-devel"
+short_desc="Simple screen locker for X"
+maintainer="Vadim Zyamalov <vadim.zyamalov@gmail.com"
+license="MIT"
+homepage="http://tools.suckless.org/slock"
+distfiles="http://dl.suckless.org/tools/slock-${version}.tar.gz"
+checksum=b53849dbc60109a987d7a49b8da197305c29307fd74c12dc18af0d3044392e6a
+
+do_patch() {
+	patch -p1 < ${FILESDIR}/slock-1.4-patches-20210226.diff
+}
+
+post_patch() {
+	[ -e ${FILESDIR}/config.h ] && cp ${FILESDIR}/config.h config.h || echo "No config.h"
+}
+
+do_build() {
+	sed -i 's/CPPFLAGS =/CPPFLAGS +=/g' config.mk
+	sed -i 's/CFLAGS =/CFLAGS +=/g' config.mk
+	sed -i 's/LDFLAGS =/LDFLAGS +=/g' config.mk
+	make CC=$CC INCS="-I." LIBS="-lX11 -lXext -lcrypt -lXrandr -lXinerama -lImlib2" ${makejobs}
+}
+
+do_install() {
+	make PREFIX=/usr DESTDIR=$DESTDIR install
+	vlicense LICENSE
+}
