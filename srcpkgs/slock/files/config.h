@@ -34,8 +34,8 @@ ResourcePref resources[] = {
 		{ "color4",       STRING,  &colorname[INPUT] },
 		{ "color1",       STRING,  &colorname[FAILED] },
 		{ "foreground",   STRING,  &text_color },
-        { "slock.monitortime",  INTEGER, &monitortime },
-        { "slock.timetocancel", INTEGER, &timetocancel },
+        { "monitortime",  INTEGER, &monitortime },
+        { "timetocancel", INTEGER, &timetocancel },
 };
 
 /*Enable blur*/
