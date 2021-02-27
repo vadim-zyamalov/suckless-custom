@@ -24,7 +24,7 @@ static const char * message = "Password, please";
 static const char * text_color = "#ffffff";
 
 /* text size (must be a valid size) */
-static const char * font_name = "8x16";
+static char * font_name = "6x10";
 
 /*Enable blur*/
 #define BLUR
@@ -43,6 +43,7 @@ ResourcePref resources[] = {
 		{ "color4",       STRING,  &colorname[INPUT] },
 		{ "color1",       STRING,  &colorname[FAILED] },
 		{ "foreground",   STRING,  &text_color },
+		{ "font_name",    STRING,  &font_name },
         { "monitortime",  INTEGER, &monitortime },
         { "timetocancel", INTEGER, &timetocancel },
         { "blurRadius",   INTEGER, &blurRadius },
