@@ -18,13 +18,22 @@ static const int failonclear = 1;
 static int timetocancel = 4;
 
 /* default message */
-static const char * message = "Suckless: Software that sucks less.";
+static const char * message = "Password, please";
 
 /* text color */
 static const char * text_color = "#ffffff";
 
 /* text size (must be a valid size) */
-static const char * font_name = "6x10";
+static const char * font_name = "8x16";
+
+/*Enable blur*/
+#define BLUR
+/*Set blur radius*/
+static int blurRadius=5;
+/*Enable Pixelation*/
+//#define PIXELATION
+/*Set pixelation radius*/
+static int pixelSize=0;
 
 /*
  * Xresources preferences to load at startup
@@ -36,13 +45,7 @@ ResourcePref resources[] = {
 		{ "foreground",   STRING,  &text_color },
         { "monitortime",  INTEGER, &monitortime },
         { "timetocancel", INTEGER, &timetocancel },
+        { "blurRadius",   INTEGER, &blurRadius },
+        { "pixelSize",    INTEGER, &pixelSize },
 };
 
-/*Enable blur*/
-#define BLUR
-/*Set blur radius*/
-static const int blurRadius=5;
-/*Enable Pixelation*/
-//#define PIXELATION
-/*Set pixelation radius*/
-static const int pixelSize=0;
