@@ -18,10 +18,10 @@ static const int failonclear = 1;
 static int timetocancel = 4;
 
 /* default message */
-static const char * message = "Password, please";
+static char * message = "Password, please";
 
 /* text color */
-static const char * text_color = "#ffffff";
+static char * text_color = "#ffffff";
 
 /* text size (must be a valid size) */
 static char * font_name = "6x10";
@@ -44,6 +44,7 @@ ResourcePref resources[] = {
 		{ "color1",       STRING,  &colorname[FAILED] },
 		{ "foreground",   STRING,  &text_color },
 		{ "font_name",    STRING,  &font_name },
+		{ "message",      STRING,  &message },
         { "monitortime",  INTEGER, &monitortime },
         { "timetocancel", INTEGER, &timetocancel },
         { "blurRadius",   INTEGER, &blurRadius },
