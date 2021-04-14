@@ -51,6 +51,7 @@ static float mfact     = 0.55; /* factor of master area size [0.05..0.95] */
 static int nmaster     = 1;    /* number of clients in master area */
 static int resizehints = 1;    /* 1 means respect size hints in tiled resizals */
 
+#include "tile.c"
 #include "fibonacci.c"
 #include "grid.c"
 #include "gaplessgrid.c"
@@ -82,11 +83,14 @@ static const Layout layouts[] = {
 #define SHCMD(cmd) { .v = (const char*[]){ "/bin/sh", "-c", cmd, NULL } }
 
 /* commands */
-static const char *termcmd[]  = { "sh", "-c", "$TERMINAL", NULL };
-static const char *dmenucmd[] = { "rofi", "-show", "run", NULL };
-static const char *dmenudcmd[] = { "rofi", "-show", "drun", "-show-icons", NULL };
-static const char *pmenucmd[] = { "powermenu", NULL };
-static const char *clipmenucmd[] = { "clipmenu", "-p", "Clip:", NULL };
+static const char *termcmd[]  =    { "sh", "-c", "$TERMINAL", NULL };
+static const char *dmenucmd[] =    { "rofi", "-show", "run", NULL };
+static const char *dmenudcmd[] =   { "rofi", "-show", "drun", "-show-icons", NULL };
+static const char *clipmenucmd[] = { "clipmenu", "-p", "Clip", NULL };
+/* static const char *dmenucmd[] =    { "dmenu_run",  "-i", "-c", "-l", "10", "-g", "2", "-bw", "2", "-p", "run",  NULL }; */
+/* static const char *dmenudcmd[] =   { "dmenu_drun", "-i", "-c", "-l", "10", "-g", "2", "-bw", "2", "-p", "drun", NULL }; */
+/* static const char *clipmenucmd[] = { "clipmenu",   "-i", "-c", "-l", "10", "-g", "2", "-bw", "2", "-p", "Clip", NULL }; */
+static const char *pmenucmd[] =    { "powermenu", NULL };
  
 /*
  * Xresources preferences to load at startup
@@ -110,9 +114,9 @@ ResourcePref resources[] = {
 
 static Key keys[] = {
 	/* modifier                     key        function        argument */
-	{ 0,    XF86XK_AudioLowerVolume,           spawn,          SHCMD("pactl set-sink-volume @DEFAULT_SINK@ -5% ; pkill -RTMIN+10 dwmblocks") },
-	{ 0,    XF86XK_AudioRaiseVolume,           spawn,          SHCMD("pactl set-sink-volume @DEFAULT_SINK@ +5% ; pkill -RTMIN+10 dwmblocks") },
-	{ 0,    XF86XK_AudioMute,                  spawn,          SHCMD("pactl set-sink-mute @DEFAULT_SINK@ toggle ; pkill -RTMIN+10 dwmblocks") },
+	{ 0,    XF86XK_AudioLowerVolume,           spawn,          SHCMD("pactl set-sink-volume @DEFAULT_SINK@ -5% ; kill -RTMIN+10 $(pidof dwmblocks)") },
+	{ 0,    XF86XK_AudioRaiseVolume,           spawn,          SHCMD("pactl set-sink-volume @DEFAULT_SINK@ +5% ; kill -RTMIN+10 $(pidof dwmblocks)") },
+	{ 0,    XF86XK_AudioMute,                  spawn,          SHCMD("pactl set-sink-mute @DEFAULT_SINK@ toggle ; kill -RTMIN+10 $(pidof dwmblocks)") },
 	{ 0,    XF86XK_PowerOff,                   spawn,          {.v = pmenucmd } },
 	{ MODKEY,                       XK_c,      spawn,          {.v = clipmenucmd } },
 	{ MODKEY,                       XK_Return, spawn,          {.v = termcmd } },
@@ -141,7 +145,7 @@ static Key keys[] = {
 	{ MODKEY|ShiftMask,             XK_g,      setlayout,      {.v = &layouts[6]} },
 	{ MODKEY,                       XK_u,      setlayout,      {.v = &layouts[7]} },
 	{ MODKEY|ShiftMask,             XK_u,      setlayout,      {.v = &layouts[8]} },
-  	{ MODKEY|ControlMask,		XK_comma,  cyclelayout,    {.i = -1 } },
+  	{ MODKEY|ControlMask,	    	XK_comma,  cyclelayout,    {.i = -1 } },
 	{ MODKEY|ControlMask,           XK_period, cyclelayout,    {.i = +1 } },
 	{ MODKEY,                       XK_space,  setlayout,      {0} },
 	{ MODKEY|ShiftMask,             XK_space,  togglefloating, {0} },
@@ -151,8 +155,8 @@ static Key keys[] = {
 	{ MODKEY,                       XK_period, focusmon,       {.i = +1 } },
 	{ MODKEY|ShiftMask,             XK_comma,  tagmon,         {.i = -1 } },
 	{ MODKEY|ShiftMask,             XK_period, tagmon,         {.i = +1 } },
-	{ MODKEY,                       XK_s,      show,           {0} },
-	{ MODKEY,                       XK_h,      hide,           {0} },
+	{ MODKEY|ShiftMask,             XK_s,      show,           {0} },
+	{ MODKEY|ShiftMask,             XK_h,      hide,           {0} },
 	TAGKEYS(                        XK_1,                      0)
 	TAGKEYS(                        XK_2,                      1)
 	TAGKEYS(                        XK_3,                      2)

@@ -1,7 +1,7 @@
 # Template file for 'dwm'
 pkgname=dwm
 version=6.2
-revision=53
+revision=54
 makedepends="libX11-devel libXinerama-devel libXft-devel freetype-devel"
 short_desc="Dynamic window manager for X"
 maintainer="Vadim Zyamalov <vadim.zyamalov@gmail.com>"
@@ -11,7 +11,7 @@ distfiles="https://dl.suckless.org/dwm/dwm-${version}.tar.gz"
 checksum=97902e2e007aaeaa3c6e3bed1f81785b817b7413947f1db1d3b62b8da4cd110e
 
 do_patch() {
-	patch -p1 < ${FILESDIR}/dwm-6.2-patches-20210122.fix.diff
+	patch -p1 < ${FILESDIR}/dwm-6.2-patches-20210330.diff
 }
 
 post_patch() {
