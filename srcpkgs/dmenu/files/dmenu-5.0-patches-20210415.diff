@@ -1,7 +1,7 @@
-diff -ruN orig/config.def.h patched/config.def.h
---- orig/config.def.h	2020-09-02 19:37:07.000000000 +0300
-+++ patched/config.def.h	2021-02-26 06:46:22.902028140 +0300
-@@ -2,6 +2,9 @@
+diff -rupN orig/config.def.h patched/config.def.h
+--- orig/config.def.h	2020-09-02 22:37:08.000000000 +0300
++++ patched/config.def.h	2021-04-15 11:02:02.058215012 +0300
+@@ -2,22 +2,51 @@
  /* Default settings; can be overriden by command line. */
  
  static int topbar = 1;                      /* -b  option; if 0, dmenu appears at bottom     */
@@ -9,14 +9,29 @@ diff -ruN orig/config.def.h patched/config.def.h
 +static int centered = 0;                    /* -c option; centers dmenu on screen */
 +static int min_width = 500;                    /* minimum width when centered */
  /* -fn option overrides fonts[0]; default X11 font or font set */
- static const char *fonts[] = {
- 	"monospace:size=10"
-@@ -11,13 +14,19 @@
+-static const char *fonts[] = {
+-	"monospace:size=10"
+-};
+-static const char *prompt      = NULL;      /* -p  option; prompt to the left of input field */
++static char font[] = "monospace:size=10";
++static const char *fonts[] = { font };
++
++static char *prompt      = NULL;      /* -p  option; prompt to the left of input field */
++
++
++static char normfgcolor[] = "#bbbbbb";
++static char normbgcolor[] = "#222222";
++static char selfgcolor[]  = "#eeeeee";
++static char selbgcolor[]  = "#005577";
++static char highfgcolor[] = "#ffc978";
+ static const char *colors[SchemeLast][2] = {
  	/*     fg         bg       */
- 	[SchemeNorm] = { "#bbbbbb", "#222222" },
- 	[SchemeSel] = { "#eeeeee", "#005577" },
-+	[SchemeSelHighlight] = { "#ffc978", "#005577" },
-+	[SchemeNormHighlight] = { "#ffc978", "#222222" },
+-	[SchemeNorm] = { "#bbbbbb", "#222222" },
+-	[SchemeSel] = { "#eeeeee", "#005577" },
++	[SchemeNorm] = { normfgcolor, normbgcolor },
++	[SchemeSel]  = { selfgcolor,  selbgcolor  },
++	[SchemeSelHighlight] = { highfgcolor, selbgcolor },
++	[SchemeNormHighlight] = { highfgcolor, normbgcolor },
  	[SchemeOut] = { "#000000", "#00ffff" },
  };
 -/* -l option; if nonzero, dmenu uses vertical list with given number of lines */
@@ -32,10 +47,23 @@ diff -ruN orig/config.def.h patched/config.def.h
 +
 +/* Size of the window border */
 +static unsigned int border_width = 0;
-diff -ruN orig/config.mk patched/config.mk
---- orig/config.mk	2020-09-02 19:37:07.000000000 +0300
-+++ patched/config.mk	2021-02-26 06:46:22.904028140 +0300
-@@ -20,7 +20,7 @@
++
++/*
++ * Xresources preferences to load at startup
++ */
++ResourcePref resources[] = {
++	{ "font",        STRING, &font },
++	{ "normfgcolor", STRING, &normfgcolor },
++	{ "normbgcolor", STRING, &normbgcolor },
++	{ "selfgcolor",  STRING, &selfgcolor },
++	{ "selbgcolor",  STRING, &selbgcolor },
++	{ "highfgcolor", STRING, &highfgcolor },
++	{ "prompt",      STRING, &prompt },
++};
+diff -rupN orig/config.mk patched/config.mk
+--- orig/config.mk	2020-09-02 22:37:08.000000000 +0300
++++ patched/config.mk	2021-04-15 10:46:48.363177549 +0300
+@@ -20,7 +20,7 @@ FREETYPEINC = /usr/include/freetype2
  
  # includes and libs
  INCS = -I$(X11INC) -I$(FREETYPEINC)
@@ -44,10 +72,10 @@ diff -ruN orig/config.mk patched/config.mk
  
  # flags
  CPPFLAGS = -D_DEFAULT_SOURCE -D_BSD_SOURCE -D_XOPEN_SOURCE=700 -D_POSIX_C_SOURCE=200809L -DVERSION=\"$(VERSION)\" $(XINERAMAFLAGS)
-diff -ruN orig/dmenu.1 patched/dmenu.1
---- orig/dmenu.1	2020-09-02 19:37:07.000000000 +0300
-+++ patched/dmenu.1	2021-02-26 06:46:22.906028140 +0300
-@@ -4,6 +4,8 @@
+diff -rupN orig/dmenu.1 patched/dmenu.1
+--- orig/dmenu.1	2020-09-02 22:37:08.000000000 +0300
++++ patched/dmenu.1	2021-04-15 10:51:35.568189325 +0300
+@@ -4,6 +4,8 @@ dmenu \- dynamic menu
  .SH SYNOPSIS
  .B dmenu
  .RB [ \-bfiv ]
@@ -56,7 +84,7 @@ diff -ruN orig/dmenu.1 patched/dmenu.1
  .RB [ \-l
  .IR lines ]
  .RB [ \-m
-@@ -40,6 +42,9 @@
+@@ -40,6 +42,9 @@ which lists programs in the user's $PATH
  .B \-b
  dmenu appears at the bottom of the screen.
  .TP
@@ -66,7 +94,7 @@ diff -ruN orig/dmenu.1 patched/dmenu.1
  .B \-f
  dmenu grabs the keyboard before reading stdin if not reading from a tty. This
  is faster, but will lock up X until stdin reaches end\-of\-file.
-@@ -47,8 +52,11 @@
+@@ -47,8 +52,11 @@ is faster, but will lock up X until stdi
  .B \-i
  dmenu matches menu items case insensitively.
  .TP
@@ -79,10 +107,10 @@ diff -ruN orig/dmenu.1 patched/dmenu.1
  .TP
  .BI \-m " monitor"
  dmenu is displayed on the monitor number supplied. Monitor numbers are starting
-diff -ruN orig/dmenu.c patched/dmenu.c
---- orig/dmenu.c	2020-09-02 19:37:07.000000000 +0300
-+++ patched/dmenu.c	2021-02-26 06:46:41.645028908 +0300
-@@ -1,12 +1,14 @@
+diff -rupN orig/dmenu.c patched/dmenu.c
+--- orig/dmenu.c	2020-09-02 22:37:08.000000000 +0300
++++ patched/dmenu.c	2021-04-15 10:53:16.792193475 +0300
+@@ -1,16 +1,19 @@
  /* See LICENSE file for copyright and license details. */
  #include <ctype.h>
  #include <locale.h>
@@ -97,14 +125,11 @@ diff -ruN orig/dmenu.c patched/dmenu.c
  
  #include <X11/Xlib.h>
  #include <X11/Xatom.h>
-@@ -15,6 +17,7 @@
+ #include <X11/Xutil.h>
++#include <X11/Xresource.h>
+ #ifdef XINERAMA
  #include <X11/extensions/Xinerama.h>
  #endif
- #include <X11/Xft/Xft.h>
-+#include <X11/Xresource.h>
- 
- #include "drw.h"
- #include "util.h"
 @@ -26,12 +29,13 @@
  #define TEXTW(X)              (drw_fontset_getwidth(drw, (X)) + lrpad)
  
@@ -120,18 +145,29 @@ diff -ruN orig/dmenu.c patched/dmenu.c
  };
  
  static char text[BUFSIZ] = "";
-@@ -53,6 +57,10 @@
+@@ -53,6 +57,21 @@ static XIC xic;
  static Drw *drw;
  static Clr *scheme[SchemeLast];
  
-+/* Temporary arrays to allow overriding xresources values */
-+static char *colortemp[4];
-+static char *tempfonts;
++/* Xresources preferences */
++enum resource_type {
++	STRING = 0,
++	INTEGER = 1,
++	FLOAT = 2
++};
++typedef struct {
++	char *name;
++	enum resource_type type;
++	void *dst;
++} ResourcePref;
++
++static void load_xresources(void);
++static void resource_load(XrmDatabase db, char *name, enum resource_type rtype, void *dst);
 +
  #include "config.h"
  
  static int (*fstrncmp)(const char *, const char *, size_t) = strncmp;
-@@ -77,7 +85,7 @@
+@@ -77,7 +96,7 @@ calcoffsets(void)
  	int i, n;
  
  	if (lines > 0)
@@ -140,7 +176,7 @@ diff -ruN orig/dmenu.c patched/dmenu.c
  	else
  		n = mw - (promptw + inputw + TEXTW("<") + TEXTW(">"));
  	/* calculate which items will begin the next page and previous page */
-@@ -89,6 +97,15 @@
+@@ -89,6 +108,15 @@ calcoffsets(void)
  			break;
  }
  
@@ -156,7 +192,7 @@ diff -ruN orig/dmenu.c patched/dmenu.c
  static void
  cleanup(void)
  {
-@@ -113,6 +130,42 @@
+@@ -113,6 +141,42 @@ cistrstr(const char *s, const char *sub)
  	return NULL;
  }
  
@@ -199,7 +235,7 @@ diff -ruN orig/dmenu.c patched/dmenu.c
  static int
  drawitem(struct item *item, int x, int y, int w)
  {
-@@ -123,7 +176,9 @@
+@@ -123,7 +187,9 @@ drawitem(struct item *item, int x, int y
  	else
  		drw_setscheme(drw, scheme[SchemeNorm]);
  
@@ -210,7 +246,7 @@ diff -ruN orig/dmenu.c patched/dmenu.c
  }
  
  static void
-@@ -152,9 +207,15 @@
+@@ -152,9 +218,15 @@ drawmenu(void)
  	}
  
  	if (lines > 0) {
@@ -229,7 +265,7 @@ diff -ruN orig/dmenu.c patched/dmenu.c
  	} else if (matches) {
  		/* draw horizontal list */
  		x += inputw;
-@@ -210,9 +271,94 @@
+@@ -210,9 +282,94 @@ grabkeyboard(void)
  	die("cannot grab keyboard");
  }
  
@@ -324,7 +360,7 @@ diff -ruN orig/dmenu.c patched/dmenu.c
  	static char **tokv = NULL;
  	static int tokn = 0;
  
-@@ -311,6 +457,9 @@
+@@ -311,6 +468,9 @@ keypress(XKeyEvent *ev)
  	int len;
  	KeySym ksym;
  	Status status;
@@ -334,7 +370,16 @@ diff -ruN orig/dmenu.c patched/dmenu.c
  
  	len = XmbLookupString(xic, ev, buf, sizeof buf, &ksym, &status);
  	switch (status) {
-@@ -437,6 +586,24 @@
+@@ -395,7 +555,7 @@ keypress(XKeyEvent *ev)
+ 
+ 	switch(ksym) {
+ 	default:
+-insert:
++	insert:
+ 		if (!iscntrl(*buf))
+ 			insert(buf, len);
+ 		break;
+@@ -437,6 +597,24 @@ insert:
  		calcoffsets();
  		break;
  	case XK_Left:
@@ -359,7 +404,7 @@ diff -ruN orig/dmenu.c patched/dmenu.c
  		if (cursor > 0 && (!sel || !sel->left || lines > 0)) {
  			cursor = nextrune(-1);
  			break;
-@@ -473,6 +640,24 @@
+@@ -473,6 +651,24 @@ insert:
  			sel->out = 1;
  		break;
  	case XK_Right:
@@ -384,23 +429,62 @@ diff -ruN orig/dmenu.c patched/dmenu.c
  		if (text[cursor] != '\0') {
  			cursor = nextrune(+1);
  			break;
-@@ -601,8 +786,13 @@
- 	int a, di, n, area = 0;
- #endif
- 	/* init appearance */
--	for (j = 0; j < SchemeLast; j++)
--		scheme[j] = drw_scm_create(drw, colors[j], 2);
-+	for (j = 0; j < SchemeLast; j++) {
-+		scheme[j] = drw_scm_create(drw, (const char**)colors[j], 2);
-+	}
-+	for (j = 0; j < SchemeOut; ++j) {
-+		for (i = 0; i < 2; ++i)
-+			free(colors[j][i]);
-+	}
+@@ -547,6 +743,54 @@ readstdin(void)
+ 	lines = MIN(lines, i);
+ }
  
- 	clip = XInternAtom(dpy, "CLIPBOARD",   False);
- 	utf8 = XInternAtom(dpy, "UTF8_STRING", False);
-@@ -611,6 +801,7 @@
++void
++resource_load(XrmDatabase db, char *name, enum resource_type rtype, void *dst)
++{
++	char *sdst = NULL;
++	int *idst = NULL;
++	float *fdst = NULL;
++	sdst = dst;
++	idst = dst;
++	fdst = dst;
++	char fullname[256];
++	char *type;
++	XrmValue ret;
++	snprintf(fullname, sizeof(fullname), "%s.%s", "dmenu", name);
++	fullname[sizeof(fullname) - 1] = '\0';
++	XrmGetResource(db, fullname, "*", &type, &ret);
++	if (!(ret.addr == NULL || strncmp("String", type, 64)))
++	{
++		switch (rtype) {
++		case STRING:
++			strcpy(sdst, ret.addr);
++			break;
++		case INTEGER:
++			*idst = strtoul(ret.addr, NULL, 10);
++			break;
++		case FLOAT:
++			*fdst = strtof(ret.addr, NULL);
++			break;
++		}
++	}
++}
++
++void
++load_xresources(void)
++{
++	Display *display;
++	char *resm;
++	XrmDatabase db;
++	ResourcePref *p;
++	display = XOpenDisplay(NULL);
++	resm = XResourceManagerString(display);
++	if (!resm)
++		return;
++	db = XrmGetStringDatabase(resm);
++	for (p = resources; p < resources + LENGTH(resources); p++)
++		resource_load(db, p->name, p->type, p->dst);
++	XCloseDisplay(display);
++}
++
+ static void
+ run(void)
+ {
+@@ -611,6 +855,7 @@ setup(void)
  	bh = drw->fonts->h + 2;
  	lines = MAX(lines, 0);
  	mh = (lines + 1) * bh;
@@ -408,7 +492,7 @@ diff -ruN orig/dmenu.c patched/dmenu.c
  #ifdef XINERAMA
  	i = 0;
  	if (parentwin == root && (info = XineramaQueryScreens(dpy, &n))) {
-@@ -637,9 +828,16 @@
+@@ -637,9 +882,16 @@ setup(void)
  				if (INTERSECT(x, y, 1, 1, info[i]))
  					break;
  
@@ -428,7 +512,7 @@ diff -ruN orig/dmenu.c patched/dmenu.c
  		XFree(info);
  	} else
  #endif
-@@ -647,11 +845,17 @@
+@@ -647,11 +899,17 @@ setup(void)
  		if (!XGetWindowAttributes(dpy, parentwin, &wa))
  			die("could not get embedding window attributes: 0x%lx",
  			    parentwin);
@@ -450,7 +534,7 @@ diff -ruN orig/dmenu.c patched/dmenu.c
  	inputw = MIN(inputw, mw/3);
  	match();
  
-@@ -659,9 +863,11 @@
+@@ -659,9 +917,11 @@ setup(void)
  	swa.override_redirect = True;
  	swa.background_pixel = scheme[SchemeNorm][ColBg].pixel;
  	swa.event_mask = ExposureMask | KeyPressMask | VisibilityChangeMask;
@@ -463,55 +547,23 @@ diff -ruN orig/dmenu.c patched/dmenu.c
  	XSetClassHint(dpy, win, &ch);
  
  
-@@ -694,6 +900,41 @@
- 	exit(1);
- }
+@@ -700,6 +960,9 @@ main(int argc, char *argv[])
+ 	XWindowAttributes wa;
+ 	int i, fast = 0;
  
-+void
-+readxresources(void) {
 +	XrmInitialize();
-+
-+	char* xrm;
-+	if ((xrm = XResourceManagerString(drw->dpy))) {
-+		char *type;
-+		XrmDatabase xdb = XrmGetStringDatabase(xrm);
-+		XrmValue xval;
-+
-+		if (XrmGetResource(xdb, "dmenu.font", "*", &type, &xval))
-+			fonts[0] = strdup(xval.addr);
-+		else
-+			fonts[0] = strdup(fonts[0]);
-+		if (XrmGetResource(xdb, "dmenu.background", "*", &type, &xval))
-+			colors[SchemeNorm][ColBg] = strdup(xval.addr);
-+		else
-+			colors[SchemeNorm][ColBg] = strdup(colors[SchemeNorm][ColBg]);
-+		if (XrmGetResource(xdb, "dmenu.foreground", "*", &type, &xval))
-+			colors[SchemeNorm][ColFg] = strdup(xval.addr);
-+		else
-+			colors[SchemeNorm][ColFg] = strdup(colors[SchemeNorm][ColFg]);
-+		if (XrmGetResource(xdb, "dmenu.selbackground", "*", &type, &xval))
-+			colors[SchemeSel][ColBg] = strdup(xval.addr);
-+		else
-+			colors[SchemeSel][ColBg] = strdup(colors[SchemeSel][ColBg]);
-+		if (XrmGetResource(xdb, "dmenu.selforeground", "*", &type, &xval))
-+			colors[SchemeSel][ColFg] = strdup(xval.addr);
-+		else
-+			colors[SchemeSel][ColFg] = strdup(colors[SchemeSel][ColFg]);
-+
-+		XrmDestroyDatabase(xdb);
-+	}
-+}
-+
- int
- main(int argc, char *argv[])
- {
-@@ -709,30 +950,40 @@
++	load_xresources();
++	
+ 	for (i = 1; i < argc; i++)
+ 		/* these options take no arguments */
+ 		if (!strcmp(argv[i], "-v")) {      /* prints version information */
+@@ -709,15 +972,23 @@ main(int argc, char *argv[])
  			topbar = 0;
  		else if (!strcmp(argv[i], "-f"))   /* grabs keyboard before reading stdin */
  			fast = 1;
 +		else if (!strcmp(argv[i], "-F"))   /* grabs keyboard before reading stdin */
-+			fuzzy = 1;
-+ 		else if (!strcmp(argv[i], "-c"))   /* centers dmenu on screen */
++			fuzzy = 0;
++		else if (!strcmp(argv[i], "-c"))   /* centers dmenu on screen */
 +			centered = 1;
  		else if (!strcmp(argv[i], "-i")) { /* case-insensitive item matching */
  			fstrncmp = strncasecmp;
@@ -531,21 +583,8 @@ diff -ruN orig/dmenu.c patched/dmenu.c
  			mon = atoi(argv[++i]);
  		else if (!strcmp(argv[i], "-p"))   /* adds prompt to left of input field */
  			prompt = argv[++i];
- 		else if (!strcmp(argv[i], "-fn"))  /* font or font set */
--			fonts[0] = argv[++i];
-+			tempfonts = argv[++i];
- 		else if (!strcmp(argv[i], "-nb"))  /* normal background color */
--			colors[SchemeNorm][ColBg] = argv[++i];
-+			colortemp[0] = argv[++i];
- 		else if (!strcmp(argv[i], "-nf"))  /* normal foreground color */
--			colors[SchemeNorm][ColFg] = argv[++i];
-+			colortemp[1] = argv[++i];
- 		else if (!strcmp(argv[i], "-sb"))  /* selected background color */
--			colors[SchemeSel][ColBg] = argv[++i];
-+			colortemp[2] = argv[++i];
- 		else if (!strcmp(argv[i], "-sf"))  /* selected foreground color */
--			colors[SchemeSel][ColFg] = argv[++i];
-+			colortemp[3] = argv[++i];
+@@ -733,6 +1004,8 @@ main(int argc, char *argv[])
+ 			colors[SchemeSel][ColFg] = argv[++i];
  		else if (!strcmp(argv[i], "-w"))   /* embedding window id */
  			embed = argv[++i];
 +		else if (!strcmp(argv[i], "-bw"))
@@ -553,28 +592,27 @@ diff -ruN orig/dmenu.c patched/dmenu.c
  		else
  			usage();
  
-@@ -748,8 +999,23 @@
- 		die("could not get embedding window attributes: 0x%lx",
- 		    parentwin);
- 	drw = drw_create(dpy, screen, root, wa.width, wa.height);
--	if (!drw_fontset_create(drw, fonts, LENGTH(fonts)))
-+	readxresources();
-+	/* Now we check whether to override xresources with commandline parameters */
-+	if ( tempfonts )
-+	   fonts[0] = strdup(tempfonts);
-+	if ( colortemp[0])
-+	   colors[SchemeNorm][ColBg] = strdup(colortemp[0]);
-+	if ( colortemp[1])
-+	   colors[SchemeNorm][ColFg] = strdup(colortemp[1]);
-+	if ( colortemp[2])
-+	   colors[SchemeSel][ColBg]  = strdup(colortemp[2]);
-+	if ( colortemp[3])
-+	   colors[SchemeSel][ColFg]  = strdup(colortemp[3]);
-+
-+	if (!drw_fontset_create(drw, (const char**)fonts, LENGTH(fonts)))
- 		die("no fonts could be loaded.");
-+
-+	free(fonts[0]);
- 	lrpad = drw->fonts->h;
+diff -rupN orig/drw.c patched/drw.c
+--- orig/drw.c	2020-09-02 22:37:08.000000000 +0300
++++ patched/drw.c	2021-04-15 10:53:16.794193475 +0300
+@@ -208,7 +208,7 @@ drw_clr_create(Drw *drw, Clr *dest, cons
+ /* Wrapper to create color schemes. The caller has to call free(3) on the
+  * returned color scheme when done using it. */
+ Clr *
+-drw_scm_create(Drw *drw, const char *clrnames[], size_t clrcount)
++drw_scm_create(Drw *drw, char *clrnames[], size_t clrcount)
+ {
+ 	size_t i;
+ 	Clr *ret;
+diff -rupN orig/drw.h patched/drw.h
+--- orig/drw.h	2020-09-02 22:37:08.000000000 +0300
++++ patched/drw.h	2021-04-15 10:53:16.795193475 +0300
+@@ -39,7 +39,7 @@ void drw_font_getexts(Fnt *font, const c
  
- #ifdef __OpenBSD__
+ /* Colorscheme abstraction */
+ void drw_clr_create(Drw *drw, Clr *dest, const char *clrname);
+-Clr *drw_scm_create(Drw *drw, const char *clrnames[], size_t clrcount);
++Clr *drw_scm_create(Drw *drw, char *clrnames[], size_t clrcount);
+ 
+ /* Cursor abstraction */
+ Cur *drw_cur_create(Drw *drw, int shape);

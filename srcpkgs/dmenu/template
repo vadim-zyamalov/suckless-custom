@@ -1,7 +1,7 @@
 # Template file for 'dmenu'
 pkgname=dmenu
 version=5.0
-revision=51
+revision=52
 makedepends="libXinerama-devel libXft-devel freetype-devel"
 short_desc="Generic menu for X"
 maintainer="Vadim Zyamalov <vadim.zyamalov@gmail.com>"
@@ -11,7 +11,7 @@ distfiles="https://dl.suckless.org/tools/${pkgname}-${version}.tar.gz"
 checksum=fe18e142c4dbcf71ba5757dbbdea93b1c67d58fc206fc116664f4336deef6ed3
 
 do_patch() {
-	patch -slNp1 < "${FILESDIR}/dmenu-5.0-patches-20210226.diff"
+	patch -slNp1 < "${FILESDIR}/dmenu-5.0-patches-20210415.diff"
 }
 
 post_patch() {
