@@ -1,0 +1,182 @@
+From 15729645675d37ce8c37a015a2c063055d6ebd6d Mon Sep 17 00:00:00 2001
+From: Mark Edgar <medgar123@gmail.com>
+Date: Fri, 22 May 2020 13:05:24 +0200
+Subject: [PATCH 1/3] sowm: fix key binding issue with NumLock.
+
+modifiers[] must be initialized after numlock is set.
+---
+ sowm.c | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/sowm.c b/sowm.c
+index 96f8340..158f2cb 100644
+--- a/sowm.c
++++ b/sowm.c
+@@ -240,7 +240,8 @@ void run(const Arg arg) {
+ }
+ 
+ void input_grab(Window root) {
+-    unsigned int i, j, modifiers[] = {0, LockMask, numlock, numlock|LockMask};
++
++    unsigned int i, j, modifiers[] = {0, LockMask, 0, LockMask};
+     XModifierKeymap *modmap = XGetModifierMapping(d);
+     KeyCode code;
+ 
+@@ -249,6 +250,8 @@ void input_grab(Window root) {
+             if (modmap->modifiermap[i * modmap->max_keypermod + k]
+                 == XKeysymToKeycode(d, 0xff7f))
+                 numlock = (1 << i);
++    modifiers[2] |= numlock;
++    modifiers[3] |= numlock;
+ 
+     XUngrabKey(d, AnyKey, AnyModifier, root);
+ 
+
+From 769fa8cacd48a93a56b83332ec8f206f48abae60 Mon Sep 17 00:00:00 2001
+From: Mark Edgar <medgar123@gmail.com>
+Date: Fri, 22 May 2020 13:47:52 +0200
+Subject: [PATCH 2/3] sowm: clean up input_grab
+
+---
+ sowm.c | 29 ++++++++++++-----------------
+ 1 file changed, 12 insertions(+), 17 deletions(-)
+
+diff --git a/sowm.c b/sowm.c
+index 158f2cb..9289621 100644
+--- a/sowm.c
++++ b/sowm.c
+@@ -240,34 +240,29 @@ void run(const Arg arg) {
+ }
+ 
+ void input_grab(Window root) {
+-
+-    unsigned int i, j, modifiers[] = {0, LockMask, 0, LockMask};
+     XModifierKeymap *modmap = XGetModifierMapping(d);
+-    KeyCode code;
++    KeyCode code = XKeysymToKeycode(d, XK_Num_Lock);
+ 
+-    for (i = 0; i < 8; i++)
+-        for (int k = 0; k < modmap->max_keypermod; k++)
+-            if (modmap->modifiermap[i * modmap->max_keypermod + k]
+-                == XKeysymToKeycode(d, 0xff7f))
+-                numlock = (1 << i);
+-    modifiers[2] |= numlock;
+-    modifiers[3] |= numlock;
++    for (unsigned int i = 0; i < 8; i++)
++        for (int m = modmap->max_keypermod, k = 0; k < m; k++)
++            if (modmap->modifiermap[i * m + k] == code)
++                numlock = 1<<i;
++    XFreeModifiermap(modmap);
+ 
+     XUngrabKey(d, AnyKey, AnyModifier, root);
+ 
+-    for (i = 0; i < sizeof(keys)/sizeof(*keys); i++)
++    unsigned int modifiers[] = {0, LockMask, numlock, numlock|LockMask};
++    for (size_t i = 0; i < sizeof(keys)/sizeof(*keys); i++)
+         if ((code = XKeysymToKeycode(d, keys[i].keysym)))
+-            for (j = 0; j < sizeof(modifiers)/sizeof(*modifiers); j++)
++            for (size_t j = 0; j < sizeof(modifiers)/sizeof(*modifiers); j++)
+                 XGrabKey(d, code, keys[i].mod | modifiers[j], root,
+                         True, GrabModeAsync, GrabModeAsync);
+ 
+-    for (i = 1; i < 4; i += 2)
+-        for (j = 0; j < sizeof(modifiers)/sizeof(*modifiers); j++)
+-            XGrabButton(d, i, MOD | modifiers[j], root, True,
++    for (unsigned int b = 1; b < 4; b += 2)
++        for (size_t j = 0; j < sizeof(modifiers)/sizeof(*modifiers); j++)
++            XGrabButton(d, b, MOD | modifiers[j], root, True,
+                 ButtonPressMask|ButtonReleaseMask|PointerMotionMask,
+                 GrabModeAsync, GrabModeAsync, 0, 0);
+-
+-    XFreeModifiermap(modmap);
+ }
+ 
+ int main(void) {
+
+From 51909c022b40827318528b7bbbcdf234525bebb2 Mon Sep 17 00:00:00 2001
+From: Mark Edgar <medgar123@gmail.com>
+Date: Sun, 24 May 2020 21:19:26 +0200
+Subject: [PATCH 3/3] sowm: separate numlockmask function
+
+---
+ sowm.c | 24 ++++++++++++++++++------
+ sowm.h |  4 ----
+ 2 files changed, 18 insertions(+), 10 deletions(-)
+
+diff --git a/sowm.c b/sowm.c
+index 9289621..436ba03 100644
+--- a/sowm.c
++++ b/sowm.c
+@@ -11,8 +11,8 @@
+ #include "sowm.h"
+ 
+ static client       *list = {0}, *ws_list[10] = {0}, *cur;
+-static int          ws = 1, sw, sh, wx, wy, numlock = 0;
+-static unsigned int ww, wh;
++static int          ws = 1, sw, sh, wx, wy;
++static unsigned int ww, wh, clean_mask;
+ 
+ static Display      *d;
+ static XButtonEvent mouse;
+@@ -66,10 +66,11 @@ void notify_motion(XEvent *e) {
+ 
+ void key_press(XEvent *e) {
+     KeySym keysym = XkbKeycodeToKeysym(d, e->xkey.keycode, 0, 0);
++    unsigned mod = clean_mask & e->xkey.state;
+ 
+     for (unsigned int i=0; i < sizeof(keys)/sizeof(*keys); ++i)
+         if (keys[i].keysym == keysym &&
+-            mod_clean(keys[i].mod) == mod_clean(e->xkey.state))
++            keys[i].mod == mod)
+             keys[i].function(keys[i].arg);
+ }
+ 
+@@ -239,19 +240,30 @@ void run(const Arg arg) {
+     execvp((char*)arg.com[0], (char**)arg.com);
+ }
+ 
+-void input_grab(Window root) {
++// Taken from DWM. Many thanks. https://git.suckless.org/dwm
++static unsigned int numlockmask(void) {
++    unsigned int nlm = 0;
+     XModifierKeymap *modmap = XGetModifierMapping(d);
+     KeyCode code = XKeysymToKeycode(d, XK_Num_Lock);
+ 
+     for (unsigned int i = 0; i < 8; i++)
+         for (int m = modmap->max_keypermod, k = 0; k < m; k++)
+             if (modmap->modifiermap[i * m + k] == code)
+-                numlock = 1<<i;
++                nlm = 1<<i;
+     XFreeModifiermap(modmap);
+ 
+     XUngrabKey(d, AnyKey, AnyModifier, root);
+ 
+-    unsigned int modifiers[] = {0, LockMask, numlock, numlock|LockMask};
++    clean_mask = ~(nlm|LockMask) &
++        (ShiftMask|ControlMask|Mod1Mask|Mod2Mask|Mod3Mask|Mod4Mask|Mod5Mask);
++    return nlm;
++}
++
++void input_grab(Window root) {
++    unsigned int nlm = numlockmask();
++    unsigned int modifiers[] = {0, LockMask, nlm, nlm|LockMask};
++    KeyCode code;
++
+     for (size_t i = 0; i < sizeof(keys)/sizeof(*keys); i++)
+         if ((code = XKeysymToKeycode(d, keys[i].keysym)))
+             for (size_t j = 0; j < sizeof(modifiers)/sizeof(*modifiers); j++)
+diff --git a/sowm.h b/sowm.h
+index b059f06..b2cef85 100644
+--- a/sowm.h
++++ b/sowm.h
+@@ -9,10 +9,6 @@
+     XGetGeometry(d, W, &(Window){0}, gx, gy, gw, gh, \
+                  &(unsigned int){0}, &(unsigned int){0})
+ 
+-// Taken from DWM. Many thanks. https://git.suckless.org/dwm
+-#define mod_clean(mask) (mask & ~(numlock|LockMask) & \
+-        (ShiftMask|ControlMask|Mod1Mask|Mod2Mask|Mod3Mask|Mod4Mask|Mod5Mask))
+-
+ typedef struct {
+     const char** com;
+     const int i;

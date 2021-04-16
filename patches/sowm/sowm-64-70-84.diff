@@ -1,0 +1,261 @@
+diff -ruN sowm/config.def.h sowm-patched/config.def.h
+--- sowm/config.def.h	2020-12-24 09:45:18.067107921 +0300
++++ sowm-patched/config.def.h	2020-12-24 10:09:40.722167893 +0300
+@@ -46,4 +46,21 @@
+     {MOD|ShiftMask, XK_6, win_to_ws, {.i = 6}},
+ };
+ 
++static struct button buttons[] = {
++    {MOD,           Button1, win_raise, {0}},
++    {MOD,           Button1, win_move, {0}},
++
++    {MOD,           Button3, win_raise, {0}},
++    {MOD,           Button3, win_resize, {0}},
++
++    {MOD|ShiftMask, Button1, win_raise, {0}},
++    {MOD|ShiftMask, Button1, win_center, {0}},
++
++    {MOD|ShiftMask, Button3, win_raise, {0}},
++    {MOD|ShiftMask, Button3, win_fs, {0}},
++
++    {MOD,           Button2, win_lower, {0}},
++    {MOD|ShiftMask, Button2, win_kill, {0}},
++};
++
+ #endif
+diff -ruN sowm/Makefile sowm-patched/Makefile
+--- sowm/Makefile	2020-12-24 09:45:18.065107921 +0300
++++ sowm-patched/Makefile	2020-12-24 10:08:30.612165018 +0300
+@@ -10,7 +10,7 @@
+ 	cp config.def.h config.h
+ 
+ sowm: sowm.c sowm.h config.h Makefile
+-	$(CC) -O3 $(CFLAGS) -o $@ $< -lX11 $(LDFLAGS)
++	$(CC) -O3 $(CFLAGS) -o $@ $< -lX11 -lXinerama $(LDFLAGS)
+ 
+ install: all
+ 	install -Dm755 sowm $(DESTDIR)$(BINDIR)/sowm
+diff -ruN sowm/sowm.c sowm-patched/sowm.c
+--- sowm/sowm.c	2020-12-24 09:45:18.068107921 +0300
++++ sowm-patched/sowm.c	2020-12-24 10:10:48.192170659 +0300
+@@ -4,6 +4,7 @@
+ #include <X11/XF86keysym.h>
+ #include <X11/keysym.h>
+ #include <X11/XKBlib.h>
++#include <X11/extensions/Xinerama.h>
+ #include <stdlib.h>
+ #include <signal.h>
+ #include <unistd.h>
+@@ -11,11 +12,12 @@
+ #include "sowm.h"
+ 
+ static client       *list = {0}, *ws_list[10] = {0}, *cur;
+-static int          ws = 1, sw, sh, wx, wy, numlock = 0;
++static int          ws = 1, sw, sh, wx, wy, numlock = 0, monitors;
+ static unsigned int ww, wh;
+ 
+ static Display      *d;
+ static XButtonEvent mouse;
++enum { MOVING = 1, SIZING = 2 } drag;
+ static Window       root;
+ 
+ static void (*events[LASTEvent])(XEvent *e) = {
+@@ -50,7 +52,7 @@
+ }
+ 
+ void notify_motion(XEvent *e) {
+-    if (!mouse.subwindow || cur->f) return;
++    if (!mouse.subwindow || !drag || cur->f) return;
+ 
+     while(XCheckTypedEvent(d, MotionNotify, e));
+ 
+@@ -58,10 +60,12 @@
+     int yd = e->xbutton.y_root - mouse.y_root;
+ 
+     XMoveResizeWindow(d, mouse.subwindow,
+-        wx + (mouse.button == 1 ? xd : 0),
+-        wy + (mouse.button == 1 ? yd : 0),
+-        MAX(1, ww + (mouse.button == 3 ? xd : 0)),
+-        MAX(1, wh + (mouse.button == 3 ? yd : 0)));
++        wx + (drag == MOVING ? xd : 0),
++        wy + (drag == MOVING ? yd : 0),
++        MAX(1, ww + (drag == SIZING ? xd : 0)),
++        MAX(1, wh + (drag == SIZING ? yd : 0)));
++
++    win_size(cur->w, &cur->wx, &cur->wx, &cur->ww, &cur->wh);
+ }
+ 
+ void key_press(XEvent *e) {
+@@ -73,12 +77,26 @@
+             keys[i].function(keys[i].arg);
+ }
+ 
++void win_move(const Arg arg) {
++    win_size(mouse.subwindow, &wx, &wy, &ww, &wh);
++    drag = MOVING;
++}
++
++void win_resize(const Arg arg) {
++    win_size(mouse.subwindow, &wx, &wy, &ww, &wh);
++    drag = SIZING;
++}
++
+ void button_press(XEvent *e) {
+     if (!e->xbutton.subwindow) return;
++    unsigned mod = mod_clean(e->xbutton.state);
+ 
+-    win_size(e->xbutton.subwindow, &wx, &wy, &ww, &wh);
+-    XRaiseWindow(d, e->xbutton.subwindow);
+     mouse = e->xbutton;
++    drag = 0;
++    for (unsigned int i = 0; i < sizeof(buttons)/sizeof(*buttons); ++i)
++        if (buttons[i].button == e->xbutton.button &&
++            mod_clean(buttons[i].mod) == mod)
++            buttons[i].function(buttons[i].arg);
+ }
+ 
+ void button_release(XEvent *e) {
+@@ -126,11 +144,49 @@
+     if (cur) XKillClient(d, cur->w);
+ }
+ 
++int multimonitor_action (int action) { // action = 0 -> center; action = 1 -> fs
++    if (!XineramaIsActive(d)) return 1;
++    XineramaScreenInfo *si = XineramaQueryScreens(d, &monitors);
++    for (int i = 0; i < monitors; i++) {
++        if ((cur->wx + (cur->ww/2) >= (unsigned int)si[i].x_org
++                && cur->wx + (cur->ww/2) < (unsigned int)si[i].x_org + si[i].width)
++            && ( cur->wy + (cur->wh/2) >= (unsigned int)si[i].y_org
++                && cur->wy + (cur->wh/2) < (unsigned int)si[i].y_org + si[i].height)) {
++            if (action)
++                XMoveResizeWindow(d, cur->w,
++                                  si[i].x_org, si[i].y_org,
++                                  si[i].width, si[i].height);
++            else
++                XMoveWindow(d, cur->w,
++                            si[i].x_org + ((si[i].width - ww)/2),
++                            si[i].y_org + ((si[i].height -wh)/2));
++            break;
++        }
++    }
++    return 0;
++}
++
+ void win_center(const Arg arg) {
+     if (!cur) return;
+ 
+     win_size(cur->w, &(int){0}, &(int){0}, &ww, &wh);
+-    XMoveWindow(d, cur->w, (sw - ww) / 2, (sh - wh) / 2);
++    if (multimonitor_action(0)) {
++        XMoveWindow(d, cur->w, (sw - ww) / 2, (sh - wh) / 2);
++    }
++
++    win_size(cur->w, &cur->wx, &cur->wy, &cur->ww, &cur->wh);
++}
++
++void win_lower(const Arg arg) {
++    if (!cur) return;
++
++    XLowerWindow(d, cur->w);
++}
++
++void win_raise(const Arg arg) {
++    if (!cur) return;
++
++    XRaiseWindow(d, cur->w);
+ }
+ 
+ void win_fs(const Arg arg) {
+@@ -138,8 +194,9 @@
+ 
+     if ((cur->f = cur->f ? 0 : 1)) {
+         win_size(cur->w, &cur->wx, &cur->wy, &cur->ww, &cur->wh);
+-        XMoveResizeWindow(d, cur->w, 0, 0, sw, sh);
+-
++        if(multimonitor_action(1)) {
++          XMoveResizeWindow(d, cur->w, 0, 0, sw, sh);
++        }
+     } else {
+         XMoveResizeWindow(d, cur->w, cur->wx, cur->wy, cur->ww, cur->wh);
+     }
+@@ -258,15 +315,29 @@
+                 XGrabKey(d, code, keys[i].mod | modifiers[j], root,
+                         True, GrabModeAsync, GrabModeAsync);
+ 
+-    for (i = 1; i < 4; i += 2)
+-        for (j = 0; j < sizeof(modifiers)/sizeof(*modifiers); j++)
+-            XGrabButton(d, i, MOD | modifiers[j], root, True,
++    for (i = 0; i < sizeof(buttons)/sizeof(*buttons); i++)
++        for (size_t j = 0; j < sizeof(modifiers)/sizeof(*modifiers); j++)
++            XGrabButton(d, buttons[i].button, buttons[i].mod | modifiers[j], root, True,
+                 ButtonPressMask|ButtonReleaseMask|PointerMotionMask,
+                 GrabModeAsync, GrabModeAsync, 0, 0);
+ 
+     XFreeModifiermap(modmap);
+ }
+ 
++void win_init(void) {
++    Window *child;
++    unsigned int i, n_child;
++
++    XQueryTree(d, RootWindow(d, DefaultScreen(d)), 
++               &(Window){0}, &(Window){0}, &child, &n_child);
++
++    for (i = 0;  i < n_child; i++) {
++        XSelectInput(d, child[i], StructureNotifyMask|EnterWindowMask);
++        XMapWindow(d, child[i]);
++        win_add(child[i]);
++    }
++}
++
+ int main(void) {
+     XEvent ev;
+ 
+@@ -283,6 +354,7 @@
+     XSelectInput(d,  root, SubstructureRedirectMask);
+     XDefineCursor(d, root, XCreateFontCursor(d, 68));
+     input_grab(root);
++    win_init();
+ 
+     while (1 && !XNextEvent(d, &ev)) // 1 && will forever be here.
+         if (events[ev.type]) events[ev.type](&ev);
+diff -ruN sowm/sowm.h sowm-patched/sowm.h
+--- sowm/sowm.h	2020-12-24 09:45:18.069107921 +0300
++++ sowm-patched/sowm.h	2020-12-24 10:09:40.728167893 +0300
+@@ -26,6 +26,13 @@
+     const Arg arg;
+ };
+ 
++struct button {
++	unsigned int mod;
++	unsigned int button;
++	void (*function)(const Arg arg);
++	const Arg arg;
++};
++
+ typedef struct client {
+     struct client *next, *prev;
+     int f, wx, wy;
+@@ -33,6 +40,8 @@
+     Window w;
+ } client;
+ 
++int multimonitor_action(int action);
++
+ void button_press(XEvent *e);
+ void button_release(XEvent *e);
+ void configure_request(XEvent *e);
+@@ -50,8 +59,13 @@
+ void win_fs(const Arg arg);
+ void win_focus(client *c);
+ void win_kill(const Arg arg);
++void win_lower(const Arg arg);
++void win_raise(const Arg arg);
++void win_move(const Arg arg);
++void win_resize(const Arg arg);
+ void win_prev(const Arg arg);
+ void win_next(const Arg arg);
++void win_init(void);
+ void win_to_ws(const Arg arg);
+ void ws_go(const Arg arg);
+ 
