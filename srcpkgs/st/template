@@ -1,7 +1,7 @@
 # Template file for 'st'
 pkgname=st
 version=0.8.4
-revision=52
+revision=53
 hostmakedepends="pkg-config"
 makedepends="fontconfig-devel libX11-devel libXft-devel harfbuzz-devel"
 depends="ncurses libharfbuzz st-terminfo-${version}_${revision}"

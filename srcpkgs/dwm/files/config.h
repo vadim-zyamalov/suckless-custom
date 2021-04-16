@@ -84,32 +84,32 @@ static const Layout layouts[] = {
 
 /* commands */
 static const char *termcmd[]  =    { "sh", "-c", "$TERMINAL", NULL };
-static const char *dmenucmd[] =    { "rofi", "-show", "run", NULL };
-static const char *dmenudcmd[] =   { "rofi", "-show", "drun", "-show-icons", NULL };
-static const char *clipmenucmd[] = { "clipmenu", "-p", "Clip", NULL };
-/* static const char *dmenucmd[] =    { "dmenu_run",  "-i", "-c", "-l", "10", "-g", "2", "-bw", "2", "-p", "run",  NULL }; */
-/* static const char *dmenudcmd[] =   { "dmenu_drun", "-i", "-c", "-l", "10", "-g", "2", "-bw", "2", "-p", "drun", NULL }; */
-/* static const char *clipmenucmd[] = { "clipmenu",   "-i", "-c", "-l", "10", "-g", "2", "-bw", "2", "-p", "Clip", NULL }; */
+/* static const char *dmenucmd[] =    { "rofi", "-show", "run", NULL }; */
+/* static const char *dmenudcmd[] =   { "rofi", "-show", "drun", "-show-icons", NULL }; */
+/* static const char *clipmenucmd[] = { "clipmenu", "-p", "Clip", NULL }; */
+static const char *dmenucmd[] =    { "dmenu_run",  "-i", "-c", "-l", "10", "-g", "2", "-bw", "2", "-p", "run",  NULL };
+static const char *dmenudcmd[] =   { "dmenu_drun", "-i", "-c", "-l", "10", "-g", "2", "-bw", "2", "-p", "drun", NULL };
+static const char *clipmenucmd[] = { "clipmenu",   "-i", "-c", "-l", "10", "-g", "2", "-bw", "2", "-p", "Clip", NULL };
 static const char *pmenucmd[] =    { "powermenu", NULL };
  
 /*
  * Xresources preferences to load at startup
  */
 ResourcePref resources[] = {
-		{ "normbgcolor",        STRING,  &normbgcolor },
-		{ "normbordercolor",    STRING,  &normbordercolor },
-		{ "normfgcolor",        STRING,  &normfgcolor },
-		{ "selbgcolor",         STRING,  &selbgcolor },
-		{ "selbordercolor",     STRING,  &selbordercolor },
-		{ "selfgcolor",         STRING,  &selfgcolor },
-		{ "borderpx",          	INTEGER, &borderpx },
-		{ "snap",          		INTEGER, &snap },
-		{ "showbar",          	INTEGER, &showbar },
-		{ "topbar",          	INTEGER, &topbar },
-		{ "nmaster",          	INTEGER, &nmaster },
-		{ "resizehints",       	INTEGER, &resizehints },
-		{ "gappx",      	 	INTEGER, &gappx },
-		{ "mfact",      	 	FLOAT,   &mfact },
+		{ "background",  STRING,  &normbgcolor },
+		{ "background",  STRING,  &normbordercolor },
+		{ "foreground",  STRING,  &normfgcolor },
+		{ "color4",      STRING,  &selbgcolor },
+		{ "color4",      STRING,  &selbordercolor },
+		{ "foreground",  STRING,  &selfgcolor },
+		{ "borderpx",    INTEGER, &borderpx },
+		{ "snap",        INTEGER, &snap },
+		{ "showbar",     INTEGER, &showbar },
+		{ "topbar",      INTEGER, &topbar },
+		{ "nmaster",     INTEGER, &nmaster },
+		{ "resizehints", INTEGER, &resizehints },
+		{ "gappx",       INTEGER, &gappx },
+		{ "mfact",       FLOAT,   &mfact },
 };
 
 static Key keys[] = {
