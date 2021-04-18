@@ -8,8 +8,8 @@ short_desc="Script, allowing terminal swallowing by the GUI programs"
 maintainer="Vadim Zyamalov <vadim.zyamalov@gmail.com>"
 license="MIT"
 homepage="https://github.com/JopStro/bspswallow"
-distfiles="https://github.com/JopStro/${pkgname}/archive/master.tar.gz>${pkgname}-${version}.tar.gz"
-checksum=99ae974601d073f06d732b4aa780221d65a2fd24f919d29d421cd7bedde3c9c4
+distfiles="${homepage}/archive/master.tar.gz>${pkgname}-${version}.tar.gz"
+checksum=2d9475a28a12191b2c4ae7c3119a846991c6acf833f411e1ad824a49a91b7e98
 wrksrc="bspswallow-master"
 
 do_install() {

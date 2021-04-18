@@ -39,19 +39,19 @@ diff -ruN orig/centeredmaster.c patched/centeredmaster.c
 +		 * of the screen */
 +		h = (m->wh - my) / (MIN(n, m->nmaster) - i);
 +		resize(c, m->wx + mx, m->wy + my, mw - (2*c->bw),
-+		       h - (2*c->bw), 0);
++			   h - (2*c->bw), 0);
 +		my += HEIGHT(c);
 +	} else {
 +		/* stack clients are stacked vertically */
 +		if ((i - m->nmaster) % 2 ) {
 +			h = (m->wh - ety) / ( (1 + n - i) / 2);
 +			resize(c, m->wx, m->wy + ety, tw - (2*c->bw),
-+			       h - (2*c->bw), 0);
++				   h - (2*c->bw), 0);
 +			ety += HEIGHT(c);
 +		} else {
 +			h = (m->wh - oty) / ((1 + n - i) / 2);
 +			resize(c, m->wx + mx + mw, m->wy + oty,
-+			       tw - (2*c->bw), h - (2*c->bw), 0);
++				   tw - (2*c->bw), h - (2*c->bw), 0);
 +			oty += HEIGHT(c);
 +		}
 +	}
@@ -94,13 +94,13 @@ diff -ruN orig/centeredmaster.c patched/centeredmaster.c
 +		 * of the screen */
 +		w = (mw + mxo - mx) / (MIN(n, m->nmaster) - i);
 +		resize(c, m->wx + mx, m->wy + my, w - (2*c->bw),
-+		       mh - (2*c->bw), 0);
++			   mh - (2*c->bw), 0);
 +		mx += WIDTH(c);
 +	} else {
 +		/* stack clients are stacked horizontally */
 +		w = (m->ww - tx) / (n - i);
 +		resize(c, m->wx + tx, m->wy, w - (2*c->bw),
-+		       m->wh - (2*c->bw), 0);
++			   m->wh - (2*c->bw), 0);
 +		tx += WIDTH(c);
 +	}
 +}
@@ -143,7 +143,7 @@ diff -ruN orig/config.def.h patched/config.def.h
 +static char selbordercolor[]        = "#005577";
 +static char selbgcolor[]            = "#005577";
 +static char *colors[][3] = {
-+       /*               fg           bg           border   */
++	   /*               fg           bg           border   */
 +	[SchemeNorm] = { normfgcolor, normbgcolor, normbordercolor },
 +	[SchemeSel]  = { selfgcolor,  selbgcolor,  selbordercolor  },
 +	[SchemeHid]  = { selbgcolor,  normbgcolor, selbgcolor  },
