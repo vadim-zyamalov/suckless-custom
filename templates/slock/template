@@ -12,7 +12,7 @@ distfiles="http://dl.suckless.org/tools/slock-${version}.tar.gz"
 checksum=b53849dbc60109a987d7a49b8da197305c29307fd74c12dc18af0d3044392e6a
 
 do_patch() {
-	patch -p1 < ${FILESDIR}/slock-1.4-patches-20210226.diff
+	patch -p1 < "${FILESDIR}/patch.diff"
 }
 
 post_patch() {

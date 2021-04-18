@@ -9,7 +9,7 @@ static char *font = "Fira Code:size=10:antialias=true:autohint=true";
 /* Spare fonts */
 static char *font2[] = {
 	"FiraCode Nerd Font:size=10:antialias=true:autohint=true",
-	"mono:pixelsize=12:antialias=true:autohint=true",
+    "mono:pixelsize=12:antialias=true:autohint=true",
 };
 
 static int borderpx = 2;

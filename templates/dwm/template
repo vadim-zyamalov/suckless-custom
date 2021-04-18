@@ -11,7 +11,7 @@ distfiles="https://dl.suckless.org/dwm/dwm-${version}.tar.gz"
 checksum=97902e2e007aaeaa3c6e3bed1f81785b817b7413947f1db1d3b62b8da4cd110e
 
 do_patch() {
-	patch -p1 < ${FILESDIR}/dwm-6.2-patches-20210330.diff
+	patch -p1 < ${FILESDIR}/patch.diff
 }
 
 post_patch() {
