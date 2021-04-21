@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 
-[ ! "$1" ] && echo "Input needed: enter any program name!" && exit
+[ ! "$1" ] && echo "Input needed: enter any program name!" && echo "usage: ./process.sh pkg[,[version][,[revision]]] ..." && exit
 
 cur_path="$(pwd)"
 pkg_path="/home/zyamalov/git/void-packages"
