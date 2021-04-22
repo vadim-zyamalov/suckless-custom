@@ -1,0 +1,22 @@
+# Template file for 'dunst_xr_theme_changer'
+pkgname=dunst-xr-theme-changer
+version=1.0
+dunst_version=1.6.1
+revision=1
+depends="dunst appres"
+short_desc="Small script for dunst to use xresources settings"
+maintainer="Vadim Zyamalov <vadim.zyamalov@gmail.com>"
+license="BSD-3-Clause"
+homepage="https://dunst-project.org"
+changelog="https://raw.githubusercontent.com/dunst-project/dunst/master/CHANGELOG.md"
+distfiles="https://github.com/dunst-project/dunst/archive/v${dunst_version}.tar.gz"
+checksum=cc7d801575f75e92b18d46ee5d3df80aaf331c88b83ec6caabbecf8636310e13
+wrksrc="dunst-${dunst_version}"
+
+do_patch() {
+    patch -p1 < ${FILESDIR}/patch.diff
+}
+
+do_install() {
+	vinstall contrib/dunst_xr_theme_changer.sh 755 usr/bin dunst_xr_theme_changer
+}
