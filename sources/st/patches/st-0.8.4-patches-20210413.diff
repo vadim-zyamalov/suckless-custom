@@ -135,13 +135,13 @@ diff -rupN orig/config.mk patched/config.mk
         `$(PKG_CONFIG) --cflags fontconfig` \
 -       `$(PKG_CONFIG) --cflags freetype2`
 -LIBS = -L$(X11LIB) -lm -lrt -lX11 -lutil -lXft \
-+       `$(PKG_CONFIG) --cflags freetype2` \
-+       `$(PKG_CONFIG) --cflags harfbuzz`
++	   `$(PKG_CONFIG) --cflags freetype2` \
++	   `$(PKG_CONFIG) --cflags harfbuzz`
 +LIBS = -L$(X11LIB) -lm -lrt -lX11 -lutil -lXft -lXrender\
         `$(PKG_CONFIG) --libs fontconfig` \
 -       `$(PKG_CONFIG) --libs freetype2`
-+       `$(PKG_CONFIG) --libs freetype2` \
-+       `$(PKG_CONFIG) --libs harfbuzz`
++	   `$(PKG_CONFIG) --libs freetype2` \
++	   `$(PKG_CONFIG) --libs harfbuzz`
  
  # flags
  STCPPFLAGS = -DVERSION=\"$(VERSION)\" -D_XOPEN_SOURCE=600
@@ -907,8 +907,8 @@ diff -rupN orig/x.c patched/x.c
  		return;
 -	if (e->xbutton.button == Button1)
 +	if (e->xbutton.button == Button3)
-+        selpaste(NULL);
-+    else if (e->xbutton.button == Button1)
++		selpaste(NULL);
++	else if (e->xbutton.button == Button1)
  		mousesel(e, 1);
  }
  
@@ -964,7 +964,7 @@ diff -rupN orig/x.c patched/x.c
 -	XClassHint class = {opt_name ? opt_name : termname,
 -	                    opt_class ? opt_class : termname};
 +	XClassHint class = {opt_name ? opt_name : "st",
-+	                    opt_class ? opt_class : "St"};
++						opt_class ? opt_class : "St"};
  	XWMHints wm = {.flags = InputHint, .input = 1};
  	XSizeHints *sizeh;
  
@@ -1100,7 +1100,7 @@ diff -rupN orig/x.c patched/x.c
  	pid_t thispid = getpid();
  	XColor xmousefg, xmousebg;
 +	Pixmap blankpm;
-+    XWindowAttributes attr;
++	XWindowAttributes attr;
 +	XVisualInfo vis;
  
 -	if (!(xw.dpy = XOpenDisplay(NULL)))

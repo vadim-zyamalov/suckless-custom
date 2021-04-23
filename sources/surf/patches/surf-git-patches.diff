@@ -15,9 +15,9 @@ diff -ruN a/config.def.h b/config.def.h
               "prop=\"$(printf '%b' \"$(xprop -id $1 $2 " \
 -             "| sed \"s/^$2(STRING) = //;s/^\\\"\\(.*\\)\\\"$/\\1/\")\" " \
 -             "| dmenu -p \"$4\" -w $1)\" && xprop -id $1 -f $3 8s -set $3 \"$prop\"", \
-+             "| sed \"s/^$2(STRING) = //;s/^\\\"\\(.*\\)\\\"$/\\1/\" && cat ~/.surf/bookmarks)\" " \
-+             "| dmenu -l 10 -p \"$4\" -w $1)\" && " \
-+             "xprop -id $1 -f $3 8s -set $3 \"$prop\"", \
++			 "| sed \"s/^$2(STRING) = //;s/^\\\"\\(.*\\)\\\"$/\\1/\" && cat ~/.surf/bookmarks)\" " \
++			 "| dmenu -l 10 -p \"$4\" -w $1)\" && " \
++			 "xprop -id $1 -f $3 8s -set $3 \"$prop\"", \
               "surf-setprop", winid, r, s, p, NULL \
          } \
  }
@@ -27,13 +27,13 @@ diff -ruN a/config.def.h b/config.def.h
  
 +/* BM_ADD(readprop) */
 +#define BM_ADD(r) {\
-+        .v = (const char *[]){ "/bin/sh", "-c", \
-+             "(echo $(xprop -id $0 $1) | cut -d '\"' -f2 " \
-+             "| sed 's/.*https*:\\/\\/\\(www\\.\\)\\?//' && cat ~/.surf/bookmarks) " \
-+             "| awk '!seen[$0]++' > ~/.surf/bookmarks.tmp && " \
-+             "mv ~/.surf/bookmarks.tmp ~/.surf/bookmarks", \
-+             winid, r, NULL \
-+        } \
++		.v = (const char *[]){ "/bin/sh", "-c", \
++			 "(echo $(xprop -id $0 $1) | cut -d '\"' -f2 " \
++			 "| sed 's/.*https*:\\/\\/\\(www\\.\\)\\?//' && cat ~/.surf/bookmarks) " \
++			 "| awk '!seen[$0]++' > ~/.surf/bookmarks.tmp && " \
++			 "mv ~/.surf/bookmarks.tmp ~/.surf/bookmarks", \
++			 winid, r, NULL \
++		} \
 +}
 +
 +#define SETURI(p)       { .v = (char *[]){ "/bin/sh", "-c", \
@@ -56,7 +56,7 @@ diff -ruN a/config.def.h b/config.def.h
  	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_b,      toggle,     { .i = ScrollBars } },
  	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_t,      toggle,     { .i = StrictTLS } },
  	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_m,      toggle,     { .i = Style } },
-+    { MODKEY               , GDK_KEY_Return, spawn,      SETURI("_SURF_GO") },
++	{ MODKEY               , GDK_KEY_Return, spawn,      SETURI("_SURF_GO") },
  };
  
  /* button definitions */
@@ -67,10 +67,10 @@ diff -ruN a/config.def.h b/config.def.h
 +
 +/* search engines */
 +static SearchEngine searchengines[] = {
-+    { "g",      "https://www.google.com/search?q=%s"             },
-+    { "ya",     "https://www.yandex.ru/search/?text=%s"          },
-+    { "ddg",    "https://duckduckgo.com/?q=%s"                   },
-+    { "wiki",   "https://ru.wikipedia.org/w/index.php?search=%s" },
++	{ "g",      "https://www.google.com/search?q=%s"             },
++	{ "ya",     "https://www.yandex.ru/search/?text=%s"          },
++	{ "ddg",    "https://duckduckgo.com/?q=%s"                   },
++	{ "wiki",   "https://ru.wikipedia.org/w/index.php?search=%s" },
 +};
 +
 +#define HOMEPAGE "https://duckduckgo.com/"
@@ -126,7 +126,7 @@ diff -ruN a/surf.c b/surf.c
  			free(path);
  		} else {
 -			url = g_strdup_printf("http://%s", uri);
-+            url = parseuri(uri);
++			url = parseuri(uri);
  		}
  		if (apath != uri)
  			free(apath);
@@ -185,11 +185,11 @@ diff -ruN a/surf.c b/surf.c
 +
 +	for (i = 0; i < LENGTH(searchengines); i++) {
 +		if (searchengines[i].token == NULL || searchengines[i].uri == NULL ||
-+		    *(uri + strlen(searchengines[i].token)) != ' ')
++			*(uri + strlen(searchengines[i].token)) != ' ')
 +			continue;
 +		if (g_str_has_prefix(uri, searchengines[i].token))
 +			return g_strdup_printf(searchengines[i].uri,
-+					       uri + strlen(searchengines[i].token) + 1);
++						   uri + strlen(searchengines[i].token) + 1);
 +	}
 +
 +	return g_strdup_printf("http://%s", uri);

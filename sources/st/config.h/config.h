@@ -9,7 +9,7 @@ static char *font = "Fira Code:size=10:antialias=true:autohint=true";
 /* Spare fonts */
 static char *font2[] = {
 	"FiraCode Nerd Font:size=10:antialias=true:autohint=true",
-    "mono:pixelsize=12:antialias=true:autohint=true",
+	"mono:pixelsize=12:antialias=true:autohint=true",
 };
 
 static int borderpx = 2;
@@ -106,22 +106,22 @@ float alpha = 0.85;
 static const char *colorname[] = {
 	/* 8 normal colors */
 	"black",
-	"red3",
-	"green3",
-	"yellow3",
-	"blue2",
-	"magenta3",
-	"cyan3",
-	"gray90",
+	"maroon",
+	"green",
+	"olive",
+	"navy",
+	"purple",
+	"teal",
+	"silver",
 
 	/* 8 bright colors */
-	"gray50",
+	"grey",
 	"red",
 	"green",
 	"yellow",
-	"#5c5cff",
-	"magenta",
-	"cyan",
+	"blue",
+	"fuchsia",
+	"aqua",
 	"white",
 
 	[255] = 0,
