@@ -8,7 +8,7 @@ maintainer="Vadim Zyamalov <vadim.zyamalov@gmail.com>"
 license="MIT"
 homepage="https://github.com/d9d6ka/dmenu_drun"
 distfiles="https://github.com/d9d6ka/${pkgname}/archive/master.tar.gz>${pkgname}-${version}.tar.gz"
-checksum=954d32baacb92a0d955e418e1ff10fdd9f012d18143a5b7d8c0c92ba03ec7305
+checksum=3ef07fc4bdf46e659fc2aaf25c7892bc5373f19d197fb322a42a83d75e8c8151
 wrksrc="dmenu_drun-master"
 
 do_install() {
