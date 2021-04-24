@@ -13,7 +13,7 @@ wrksrc="dmenu_drun-master"
 
 do_install() {
     vinstall dmenu_drun 755 usr/bin
-	# Install README.md as documentation
-	vdoc README.md
+    # Install README.md as documentation
+    vdoc README.md
     vlicense LICENSE
 }

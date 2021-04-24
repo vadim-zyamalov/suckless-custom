@@ -14,7 +14,7 @@ wrksrc="bspswallow-master"
 
 do_install() {
     vinstall bspswallow 755 usr/bin
-	# Install README.md as documentation
-	vdoc README.md
+    # Install README.md as documentation
+    vdoc README.md
     vlicense LICENSE
 }

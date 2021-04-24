@@ -18,5 +18,5 @@ do_patch() {
 }
 
 do_install() {
-	vinstall contrib/dunst_xr_theme_changer.sh 755 usr/bin dunst_xr_theme_changer
+    vinstall contrib/dunst_xr_theme_changer.sh 755 usr/bin dunst_xr_theme_changer
 }
