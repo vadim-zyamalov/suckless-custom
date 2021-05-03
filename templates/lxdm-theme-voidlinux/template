@@ -9,7 +9,7 @@ maintainer="Vadim Zyamalov <vadim.zyamalov@gmail.com>"
 license="GPL-3.0-or-later"
 homepage="https://github.com/d9d6ka/lxdm-theme-voidlinux"
 distfiles="https://github.com/d9d6ka/lxdm-theme-voidlinux/archive/master.tar.gz"
-checksum=ab3ce7bdd22d5112940623bb379d6245428ef9a72068f4da4f3727fc5aa4bf80
+checksum=98b904c346637b0244611b51d49e7ffa287bbc966ddc6e4c8260db462c735b79
 
 do_install() {
 	mkdir -p $DESTDIR/usr/share/lxdm/themes
