@@ -1,0 +1,17 @@
+# Template file for 'lxdm-theme-voidlinux'
+pkgname=lxdm-theme-voidlinux
+version=1.0
+revision=1
+wrksrc="lxdm-theme-voidlinux-master"
+depends="lxdm"
+short_desc="LXDM theme for voidlinux"
+maintainer="Vadim Zyamalov <vadim.zyamalov@gmail.com>"
+license="GPL-3.0-or-later"
+homepage="https://github.com/d9d6ka/lxdm-theme-voidlinux"
+distfiles="https://github.com/d9d6ka/lxdm-theme-voidlinux/archive/master.tar.gz"
+checksum=ab3ce7bdd22d5112940623bb379d6245428ef9a72068f4da4f3727fc5aa4bf80
+
+do_install() {
+	mkdir -p $DESTDIR/usr/share/lxdm/themes
+	vcopy voidlinux usr/share/lxdm/themes
+}
