@@ -1,0 +1,17 @@
+# Template file for 'lxdm-theme-adapta'
+pkgname=lxdm-theme-adapta
+version=1.0
+revision=1
+wrksrc="XThemes-master"
+depends="lxdm"
+short_desc="LXDM theme"
+maintainer="Vadim Zyamalov <vadim.zyamalov@gmail.com>"
+license="GPL-3.0-or-later"
+homepage="https://github.com/ilnanny/XThemes"
+distfiles="https://github.com/ilnanny/XThemes/archive/master.tar.gz"
+checksum=c117ba174a87075f35ebc9b10a7f7a28a75c636cd88e304edcda5d7c72de723d
+
+do_install() {
+	mkdir -p $DESTDIR/usr/share/lxdm/themes
+	vcopy Lxdm-themes/adapta usr/share/lxdm/themes
+}
