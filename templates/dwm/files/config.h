@@ -84,12 +84,12 @@ static const Layout layouts[] = {
 
 /* commands */
 static const char *termcmd[]  =    { "sh", "-c", "$TERMINAL", NULL };
-/* static const char *dmenucmd[] =    { "rofi", "-show", "run", NULL }; */
-/* static const char *dmenudcmd[] =   { "rofi", "-show", "drun", "-show-icons", NULL }; */
-/* static const char *clipmenucmd[] = { "clipmenu", "-p", "Clip", NULL }; */
-static const char *dmenucmd[] =    { "dmenu_run",  "-i", "-c", "-l", "10", "-g", "2", "-bw", "2", "-p", "run",  NULL };
-static const char *dmenudcmd[] =   { "dmenu_drun", "-i", "-c", "-l", "10", "-g", "2", "-bw", "2", "-p", "drun", NULL };
-static const char *clipmenucmd[] = { "clipmenu",   "-i", "-c", "-l", "10", "-g", "2", "-bw", "2", "-p", "Clip", NULL };
+static const char *dmenucmd[] =    { "rofi", "-show", "run", NULL };
+static const char *dmenudcmd[] =   { "rofi", "-show", "drun", "-show-icons", NULL };
+static const char *clipmenucmd[] = { "clipmenu", "-p", "Clip", NULL };
+/* static const char *dmenucmd[] =    { "dmenu_run",  "-i", "-c", "-l", "10", "-g", "2", "-bw", "2", "-p", "run",  NULL }; */
+/* static const char *dmenudcmd[] =   { "dmenu_drun", "-i", "-c", "-l", "10", "-g", "2", "-bw", "2", "-p", "drun", NULL }; */
+/* static const char *clipmenucmd[] = { "clipmenu",   "-i", "-c", "-l", "10", "-g", "2", "-bw", "2", "-p", "Clip", NULL }; */
 static const char *pmenucmd[] =    { "powermenu", NULL };
  
 /*
