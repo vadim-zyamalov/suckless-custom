@@ -1,18 +1,38 @@
 #!/usr/bin/env sh
 
-USAGE="usage: ./process.sh -s SOURCES -t TEMPLATES -p XBPS_SRC pkg[,[version][,[revision]]] ..."
+check2 () {
+    [ "$1" = "-s" -o "$1" = "--sources" ] && echo "$2" && echo "$USAGE" && exit 1
+    [ "$1" = "-t" -o "$1" = "--templates" ] && echo "$2" && echo "$USAGE" && exit 1
+    [ "$1" = "-v" -o "$1" = "--void" ] && echo "$2" && echo "$USAGE" && exit 1
+}
+
+USAGE="usage: ./process.sh (-s|--sources) SOURCES (-t|--templates) TEMPLATES (-v|--void) XBPS_SRC pkg[,[version][,[revision]]] ..."
 cur_path=$(pwd)
 
-[ ! "$*" ] && echo "ERROR: Empty input!" && echo "$USAGE" && exit 1
+[ $# -eq 0 ] && echo "ERROR: Empty input!" && echo "$USAGE" && exit 1
 
-while getopts "s:t:p:" opt; do
-    case $opt in
-        s) src_path="$(cd $OPTARG; pwd)" ;;
-        t) tmp_path="$(cd $OPTARG; pwd)" ;;
-        p) pkg_path="$(cd $OPTARG; pwd)" ;;
+while [ $# -gt 0 ]; do
+    case $1 in
+        -s|--sources)
+            check2 "$2" "ERROR: No sources dir provided"
+            src_path="$(cd "$2"; pwd)"
+            shift 2
+            ;;
+        -t|--templates)
+            check2 "$2" "ERROR: No templates dir provided"
+            tmp_path="$(cd "$2"; pwd)"
+            shift 2
+            ;;
+        -v|--void)
+            check2 "$2" "ERROR: No void-packages dir provided"
+            pkg_path="$(cd "$2"; pwd)"
+            shift 2
+            ;;
+        *)
+            break
+            ;;
     esac
 done
-shift $(($OPTIND - 1))
 
 [ -z "$src_path" ] && echo "ERROR: No sources path!" && echo "$USAGE" && exit 1
 [ -z "$tmp_path" ] && echo "ERROR: No templates path!" && echo "$USAGE" && exit 1
