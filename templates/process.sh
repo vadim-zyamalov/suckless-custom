@@ -40,6 +40,10 @@ done
 
 [ -z "$1" ] && echo "ERROR: No packages!" && echo "$USAGE" && exit 1
 
+cd "$pkg_path"
+git fetch
+git pull
+
 cd "$tmp_path"
 
 while [ "$1" ]; do
@@ -58,14 +62,18 @@ while [ "$1" ]; do
         [ -f "$tmp_path/$pkg/files/config.h" ] && [ ! -z "$config" ] && echo "$pkg : config.h" && rm "$tmp_path/$pkg/files/config.h" && cp "$src_path/$pkg/config.h/$config" "$tmp_path/$pkg/files/config.h"
         [ -f "$tmp_path/$pkg/files/patch.diff" ] && [ ! -z "$patchf" ] && echo "$pkg : patch.diff" && rm "$tmp_path/$pkg/files/patch.diff" && cp "$src_path/$pkg/patches/$patchf" "$tmp_path/$pkg/files/patch.diff"
 
-        rm -r "$pkg_path/srcpkgs/$pkg"
+        cd "$pkg_path"
+        
+        mv "$pkg_path/srcpkgs/$pkg" "$pkg_path/srcpkgs/${pkg}.bak"
         cp -r "$tmp_path/$pkg" "$pkg_path/srcpkgs/"
 
         del=$(/usr/bin/ls "$pkg_path/hostdir/binpkgs" | grep -e "^$pkg-[0-9\.]\+_[0-9]\+.*\.xbps")
         [ ! -z "$del" ] && rm "$pkg_path/hostdir/binpkgs/$del"
 
-        cd "$pkg_path"
         ./xbps-src pkg "$pkg"
+
+        rm -rf "$pkg_path/srcpkgs/$pkg"
+        mv "$pkg_path/srcpkgs/${pkg}.bak" "$pkg_path/srcpkgs/$pkg"
         cd "$tmp_path"
     fi
     shift
