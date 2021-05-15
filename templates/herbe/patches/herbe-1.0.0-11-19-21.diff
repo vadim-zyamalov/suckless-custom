@@ -1,0 +1,214 @@
+diff -ruN orig/config.def.h patched/config.def.h
+--- orig/config.def.h	2021-05-15 21:11:54.140696901 +0300
++++ patched/config.def.h	2021-05-15 21:34:18.065752005 +0300
+@@ -2,18 +2,19 @@
+ static const char *border_color = "#ececec";
+ static const char *font_color = "#ececec";
+ static const char *font_pattern = "monospace:size=10";
+-static const unsigned line_spacing = 5;
+-static const unsigned int padding = 15;
++static unsigned int line_spacing = 5;
++static unsigned int padding = 15;
++static unsigned int use_primary_monitor = 0;
+ 
+-static const unsigned int width = 450;
+-static const unsigned int border_size = 2;
+-static const unsigned int pos_x = 30;
+-static const unsigned int pos_y = 60;
++static unsigned int width = 450;
++static unsigned int border_size = 2;
++static unsigned int pos_x = 30;
++static unsigned int pos_y = 60;
+ 
+ enum corners { TOP_LEFT, TOP_RIGHT, BOTTOM_LEFT, BOTTOM_RIGHT };
+ enum corners corner = TOP_RIGHT;
+ 
+-static const unsigned int duration = 5; /* in seconds */
++static unsigned int duration = 5; /* in seconds */
+ 
+ #define DISMISS_BUTTON Button1
+ #define ACTION_BUTTON Button3
+diff -ruN orig/herbe.c patched/herbe.c
+--- orig/herbe.c	2021-05-15 21:11:54.142696901 +0300
++++ patched/herbe.c	2021-05-15 21:31:43.048745649 +0300
+@@ -1,5 +1,7 @@
+ #include <X11/Xlib.h>
+ #include <X11/Xft/Xft.h>
++#include <X11/extensions/Xrandr.h>
++#include <X11/Xresource.h>
+ #include <stdio.h>
+ #include <stdlib.h>
+ #include <signal.h>
+@@ -7,7 +9,8 @@
+ #include <string.h>
+ #include <stdarg.h>
+ #include <fcntl.h>
+-#include <semaphore.h>
++#include <sys/ipc.h>
++#include <sys/shm.h>
+ 
+ #include "config.h"
+ 
+@@ -15,6 +18,13 @@
+ #define EXIT_FAIL 1
+ #define EXIT_DISMISS 2
+ 
++#define XRES_STR(name)                                        \
++	if (XrmGetResource(db, "herbe." #name, "*", &type, &val)) \
++	name = val.addr
++#define XRES_INT(name)                                        \
++	if (XrmGetResource(db, "herbe." #name, "*", &type, &val)) \
++	name = strtoul(val.addr, 0, 10)
++
+ Display *display;
+ Window window;
+ int exit_code = EXIT_DISMISS;
+@@ -79,13 +89,23 @@
+ 	XFlush(display);
+ }
+ 
++void read_y_offset(unsigned int **offset, int *id) {
++    int shm_id = shmget(8432, sizeof(unsigned int), IPC_CREAT | 0660);
++    if (shm_id == -1) die("shmget failed");
++
++    *offset = (unsigned int *)shmat(shm_id, 0, 0);
++    if (*offset == (unsigned int *)-1) die("shmat failed\n");
++    *id = shm_id;
++}
++
++void free_y_offset(int id) {
++    shmctl(id, IPC_RMID, NULL);
++}
++
+ int main(int argc, char *argv[])
+ {
+ 	if (argc == 1)
+-	{
+-		sem_unlink("/herbe");
+-		die("Usage: %s body", argv[0]);
+-	}
++        die("Usage: %s body", argv[0]);
+ 
+ 	struct sigaction act_expire, act_ignore;
+ 
+@@ -107,12 +127,49 @@
+ 	if (!(display = XOpenDisplay(0)))
+ 		die("Cannot open display");
+ 
++	XrmInitialize();
++
++	char *res_man = XResourceManagerString(display);
++	XrmDatabase db = XrmGetStringDatabase(res_man);
++
++	char *type;
++	XrmValue val;
++
++	XRES_STR(background_color);
++	XRES_STR(border_color);
++	XRES_STR(font_color);
++	XRES_STR(font_pattern);
++
++	XRES_INT(line_spacing);
++	XRES_INT(padding);
++	XRES_INT(width);
++	XRES_INT(border_size);
++	XRES_INT(pos_x);
++	XRES_INT(pos_y);
++	XRES_INT(corner);
++	XRES_INT(duration);
++	XRES_INT(use_primary_monitor);
++
+ 	int screen = DefaultScreen(display);
+ 	Visual *visual = DefaultVisual(display, screen);
+ 	Colormap colormap = DefaultColormap(display, screen);
+ 
++	int screen_x = 0;
++	int screen_y = 0;
+ 	int screen_width = DisplayWidth(display, screen);
+ 	int screen_height = DisplayHeight(display, screen);
++	if(use_primary_monitor) {
++		int nMonitors;
++		XRRMonitorInfo* info = XRRGetMonitors(display, RootWindow(display, screen), 1, &nMonitors);
++		for(int i = 0; i < nMonitors; i++) {
++			if(info[i].primary) {
++				screen_x = info[i].x;
++				screen_y = info[i].y;
++				screen_width = info[i].width;
++				screen_height = info[i].height;
++			}
++		}
++	}
+ 
+ 	XSetWindowAttributes attributes;
+ 	attributes.override_redirect = True;
+@@ -151,16 +208,22 @@
+ 		}
+ 	}
+ 
+-	unsigned int x = pos_x;
+-	unsigned int y = pos_y;
++    int y_offset_id;
++    unsigned int *y_offset;
++    read_y_offset(&y_offset, &y_offset_id);
++
+ 	unsigned int text_height = font->ascent - font->descent;
+ 	unsigned int height = (num_of_lines - 1) * line_spacing + num_of_lines * text_height + 2 * padding;
++	unsigned int x = screen_x + pos_x;
++	unsigned int y = screen_y + pos_y + *y_offset;
++
++    unsigned int used_y_offset = (*y_offset) += height + padding;
+ 
+ 	if (corner == TOP_RIGHT || corner == BOTTOM_RIGHT)
+-		x = screen_width - width - border_size * 2 - pos_x;
++		x = screen_x + screen_width - width - border_size * 2 - pos_x;
+ 
+ 	if (corner == BOTTOM_LEFT || corner == BOTTOM_RIGHT)
+-		y = screen_height - height - border_size * 2 - pos_y;
++		y = screen_y + screen_height - height - border_size * 2 - pos_y;
+ 
+ 	window = XCreateWindow(display, RootWindow(display, screen), x, y, width, height, border_size, DefaultDepth(display, screen),
+ 						   CopyFromParent, visual, CWOverrideRedirect | CWBackPixel | CWBorderPixel, &attributes);
+@@ -171,9 +234,6 @@
+ 	XSelectInput(display, window, ExposureMask | ButtonPress);
+ 	XMapWindow(display, window);
+ 
+-	sem_t *mutex = sem_open("/herbe", O_CREAT, 0644, 1);
+-	sem_wait(mutex);
+-
+ 	sigaction(SIGUSR1, &act_expire, 0);
+ 	sigaction(SIGUSR2, &act_expire, 0);
+ 
+@@ -204,17 +264,17 @@
+ 		}
+ 	}
+ 
+-	sem_post(mutex);
+-	sem_close(mutex);
+ 
+ 	for (int i = 0; i < num_of_lines; i++)
+ 		free(lines[i]);
+ 
++    if (used_y_offset == *y_offset) free_y_offset(y_offset_id);
+ 	free(lines);
+ 	XftDrawDestroy(draw);
+ 	XftColorFree(display, visual, colormap, &color);
+ 	XftFontClose(display, font);
++	XrmDestroyDatabase(db);
+ 	XCloseDisplay(display);
+ 
+ 	return exit_code;
+-}
+\ В конце файла нет новой строки
++}
+diff -ruN orig/Makefile patched/Makefile
+--- orig/Makefile	2021-05-15 21:11:54.143696901 +0300
++++ patched/Makefile	2021-05-15 21:20:08.839717184 +0300
+@@ -9,7 +9,7 @@
+ 	cp config.def.h config.h
+ 
+ herbe: herbe.c config.h
+-	$(CC) herbe.c $(CFLAGS) -o herbe
++	$(CC) herbe.c $(CFLAGS) -o herbe -lXrandr
+ 
+ install: herbe
+ 	mkdir -p ${DESTDIR}${PREFIX}/bin
