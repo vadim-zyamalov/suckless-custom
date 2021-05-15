@@ -1,5 +1,13 @@
 # Custom repository for suckless and some other tools I use
 
+## Adding this repository to your system
+
+Generate a `<repo name>.conf` file in `/etc/xbps.d/` with the following contents:
+
+```sh
+repository=https://raw.githubusercontent.com/d9d6ka/void-custom-repo/master/binaries
+```
+
 ## Repository contents
 
 This is my self-made xbps repo of my builds of some suckless tools ([suckless.org](https://suckelss.org)) and some other cool stuff tweaked for my own needs.
@@ -16,6 +24,8 @@ Included in the repo are:
 - `st`, ver. 0.8.4
 - `xdgmenumaker`, ver. 1.6, by @gapan
     - I've allowed IceWM to use svg icons as the version in the standard repo allows it
+- `xidlehook`, ver. 0.10.0, by @jD91mZM2
+    - Installing a prebuilt package is much faster than building from sources, especially on my Atom eeePC.
 
 You should have [Fira Code](https://github.com/tonsky/FiraCode/releases/download/5.2/Fira_Code_v5.2.zip) and `FiraCode Nerd Font` already installed on your system to use my suckless tools builds.
 
