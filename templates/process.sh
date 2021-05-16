@@ -64,7 +64,7 @@ while [ "$1" ]; do
 
         cd "$pkg_path"
         
-        mv "$pkg_path/srcpkgs/$pkg" "$pkg_path/srcpkgs/${pkg}.bak"
+        [ -d "$pkg_path/srcpkgs/$pkg" ] && mv "$pkg_path/srcpkgs/$pkg" "$pkg_path/srcpkgs/${pkg}.bak"
         cp -r "$tmp_path/$pkg" "$pkg_path/srcpkgs/"
 
         del=$(/usr/bin/ls "$pkg_path/hostdir/binpkgs" | grep -e "^$pkg-[0-9\.]\+_[0-9]\+.*\.xbps")
@@ -73,7 +73,7 @@ while [ "$1" ]; do
         ./xbps-src pkg "$pkg"
 
         rm -rf "$pkg_path/srcpkgs/$pkg"
-        mv "$pkg_path/srcpkgs/${pkg}.bak" "$pkg_path/srcpkgs/$pkg"
+        [ -d "$pkg_path/srcpkgs/${pkg}.bak" ] && mv "$pkg_path/srcpkgs/${pkg}.bak" "$pkg_path/srcpkgs/$pkg"
         cd "$tmp_path"
     fi
     shift
