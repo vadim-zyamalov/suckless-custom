@@ -13,7 +13,7 @@ static const int systraypinningfailfirst = 1;   /* 1: if pinning fails, display 
 static const int showsystray        = 1;     /* 0 means no systray */
 static int showbar            = 1;        /* 0 means no bar */
 static int topbar             = 1;        /* 0 means bottom bar */
-static const char *fonts[]          = { "Fira Code:size=8", "Noto Color Emoji:size=8", "FiraCode Nerd Font:size=8", "monospace:size=8" };
+static const char *fonts[]          = { "FiraCode Nerd Font:size=8", "Noto Color Emoji:size=8", "monospace:size=8" };
 static char normbgcolor[]           = "#222222";
 static char normbordercolor[]       = "#444444";
 static char normfgcolor[]           = "#bbbbbb";

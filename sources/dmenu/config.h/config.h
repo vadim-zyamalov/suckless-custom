@@ -6,12 +6,11 @@ static int fuzzy = 1;                      /* -F  option; if 0, dmenu doesn't us
 static int centered = 0;                    /* -c option; centers dmenu on screen */
 static int min_width = 500;                    /* minimum width when centered */
 /* -fn option overrides fonts[0]; default X11 font or font set */
-static char font[] = "Fira Code:size=10";
+static char font[] = "FiraCode Nerd Font:size=8";
 static const char *fonts[] = {
 	font,
 	"Noto Color Emoji:size=8",
-	"FiraCode Nerd Font:size=8",
-	"monospace:size=10",
+	"monospace:size=8",
 };
 
 static char *prompt      = NULL;      /* -p  option; prompt to the left of input field */
