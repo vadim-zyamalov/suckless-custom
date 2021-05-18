@@ -44,6 +44,8 @@ cd "$pkg_path"
 git fetch
 git pull
 
+rm -r --interactive=never "$pkg_path"/hostdir/binpkgs/*
+
 cd "$tmp_path"
 
 while [ "$1" ]; do
@@ -52,28 +54,25 @@ while [ "$1" ]; do
         echo "$pkg : prepare"
         
         version=$(echo "$1" | awk 'BEGIN { RS = "[ \n]+"; FS = "," } { print $2 }')
-        [ ! -z "$version" ] && sed -i -e "s/^\(version=\)[0-9\.]\+$/\1$version/" "$tmp_path/$pkg/template"
+        [ ! -z "$version" ] && sed -i -e "s/^\(version=\)[0-9\.]\+$/\1$version/" "$tmp_path/$pkg"/template
         revision=$(echo "$1" | awk 'BEGIN { RS = "[ \n]+"; FS = "," } { print $3 }')
-        [ ! -z "$revision" ] && sed -i -e "s/^\(revision=\)[0-9\.]\+$/\1$revision/" "$tmp_path/$pkg/template"
+        [ ! -z "$revision" ] && sed -i -e "s/^\(revision=\)[0-9\.]\+$/\1$revision/" "$tmp_path/$pkg"/template
 
-        config=$(/usr/bin/ls "$src_path/$pkg/config.h/" 2> /dev/null | grep -e "\.h$" | sort -r | head -n 1)
-        patchf=$(/usr/bin/ls "$src_path/$pkg/patches/" 2> /dev/null | grep -e "\.diff$" | sort -r | head -n 1)
+        config=$(/usr/bin/ls "$src_path/$pkg"/config.h/ 2> /dev/null | grep -e "\.h$" | sort -r | head -n 1)
+        patchf=$(/usr/bin/ls "$src_path/$pkg"/patches/ 2> /dev/null | grep -e "\.diff$" | sort -r | head -n 1)
 
-        [ -f "$tmp_path/$pkg/files/config.h" ] && [ ! -z "$config" ] && echo "$pkg : config.h" && rm "$tmp_path/$pkg/files/config.h" && cp "$src_path/$pkg/config.h/$config" "$tmp_path/$pkg/files/config.h"
-        [ -f "$tmp_path/$pkg/files/patch.diff" ] && [ ! -z "$patchf" ] && echo "$pkg : patch.diff" && rm "$tmp_path/$pkg/files/patch.diff" && cp "$src_path/$pkg/patches/$patchf" "$tmp_path/$pkg/files/patch.diff"
+        [ -f "$tmp_path/$pkg"/files/config.h ] && [ ! -z "$config" ] && echo "$pkg : config.h" && rm "$tmp_path/$pkg"/files/config.h && cp "$src_path/$pkg"/config.h/"$config" "$tmp_path/$pkg"/files/config.h
+        [ -f "$tmp_path/$pkg"/files/patch.diff ] && [ ! -z "$patchf" ] && echo "$pkg : patch.diff" && rm "$tmp_path/$pkg"/files/patch.diff && cp "$src_path/$pkg"/patches/"$patchf" "$tmp_path/$pkg"/files/patch.diff
 
         cd "$pkg_path"
         
-        [ -d "$pkg_path/srcpkgs/$pkg" ] && mv "$pkg_path/srcpkgs/$pkg" "$pkg_path/srcpkgs/${pkg}.bak"
-        cp -r "$tmp_path/$pkg" "$pkg_path/srcpkgs/"
-
-        del=$(/usr/bin/ls "$pkg_path/hostdir/binpkgs" | grep -e "^$pkg-[0-9\.]\+_[0-9]\+.*\.xbps")
-        [ ! -z "$del" ] && rm "$pkg_path/hostdir/binpkgs/$del"
+        [ -d "$pkg_path"/srcpkgs/"$pkg" ] && mv "$pkg_path"/srcpkgs/"$pkg" "$pkg_path"/srcpkgs/"${pkg}.bak"
+        cp -r "$tmp_path/$pkg" "$pkg_path"/srcpkgs/
 
         ./xbps-src pkg "$pkg"
 
-        rm -rf "$pkg_path/srcpkgs/$pkg"
-        [ -d "$pkg_path/srcpkgs/${pkg}.bak" ] && mv "$pkg_path/srcpkgs/${pkg}.bak" "$pkg_path/srcpkgs/$pkg"
+        rm -rf "$pkg_path"/srcpkgs/"$pkg"
+        [ -d "$pkg_path"/srcpkgs/"${pkg}.bak" ] && mv "$pkg_path"/srcpkgs/"${pkg}.bak" "$pkg_path"/srcpkgs/"$pkg"
         cd "$tmp_path"
     fi
     shift
