@@ -8,6 +8,7 @@
 static char *font = "FiraCode Nerd Font:size=10:antialias=true:autohint=true";
 /* Spare fonts */
 static char *font2[] = {
+	"Hack Nerd Font:size=10:antialias=true:autohint=true",
 	"Noto Color Emoji:size=10:antialias=true:autohint=true",
 	"monospace:pixelsize=10:antialias=true:autohint=true",
 };
