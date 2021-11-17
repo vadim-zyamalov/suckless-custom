@@ -1,39 +1,5 @@
 # Custom repository for suckless and some other tools I use
 
-## Adding this repository to your system
-
-Generate a `<repo name>.conf` file in `/etc/xbps.d/` with the following contents:
-
-```sh
-repository=https://raw.githubusercontent.com/d9d6ka/void-custom-repo/master/binaries
-```
-
-## Repository contents
-
-This is my self-made xbps repo of my builds of some suckless tools ([suckless.org](https://suckelss.org)) and some other cool stuff tweaked for my own needs.
-
-The main purpose was to have an ability to install custom `dmenu` replacing standard repo version.
-
-Included in the repo are:
-- `bspswallow`, by @JopStro
-    - Just packaged for the ease of installation. Both main and alternative versions included.
-- `dmenu`, ver. 5.0
-    - libXft from this repository is needed!
-- `dmenu_drun`, ver. 1.0(2), by @d9d6ka
-    - My self-written python version of {i3,j4}-dmenu-desktop.
-- `dwm`, ver. 6.2
-    - libXft from this repository is needed!
-- `slock`, ver. 1.4
-- `st`, ver. 0.8.4
-- `xdgmenumaker`, ver. 1.6, by @gapan
-    - I've allowed IceWM to use svg icons as the version in the standard repo allows it
-- `xidlehook`, ver. 0.10.0, by @jD91mZM2
-    - Installing a prebuilt package is much faster than building from sources, especially on my Atom eeePC.
-- `libXft`, ver. 2.3.3
-    - The mainstream version patched with a patch, allowing colored emojis.
-
-You should have [Fira Code](https://github.com/tonsky/FiraCode/releases/download/5.2/Fira_Code_v5.2.zip), `FiraCode Nerd Font` and `Noto Color Emoji` fonts already installed on your system to use my suckless tools builds.
-
 ## Suckless tools dependencies (for manual install)
 
 ### st
@@ -42,6 +8,7 @@ You should have [Fira Code](https://github.com/tonsky/FiraCode/releases/download
 apt install libx11-dev x11proto-core-dev libxft-dev
 xbps-install -S base-devel fontconfig-devel ncurses libX11-devel libXft-devel
 ```
+
 ### surf
 
 ```bash
@@ -81,10 +48,3 @@ EOT
 ### dwmblocks
 
 `dwmblocks` by [@torrinfail](https://github.com/torrinfail/dwmblocks).
-
-### sxiv
-
-```bash
-git clone https://github.com/muennich/sxiv
-xbps-install imlib2-devel libexif-devel giflib-devel
-```

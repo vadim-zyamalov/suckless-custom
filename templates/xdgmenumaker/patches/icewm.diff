@@ -1,6 +1,0 @@
-diff -Naurp0 a/src/xdgmenumaker b/src/xdgmenumaker
---- a/src/xdgmenumaker	2020-09-16 21:43:03.000000000 +0300
-+++ b/src/xdgmenumaker	2020-12-02 16:27:02.019345495 +0300
-@@ -323 +323 @@ def icon_full_path(icon):
--        if desktop == "jwm" and not nosvg:
-+        if ((desktop == "jwm") or (desktop == "icewm")) and not nosvg:
