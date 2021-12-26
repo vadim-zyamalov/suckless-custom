@@ -5,10 +5,10 @@
  *
  * font: see http://freedesktop.org/software/fontconfig/fontconfig-user.html
  */
-static char *font = "Fira Code:size=10:antialias=true:autohint=true";
+static char *font = "Iosevka:size=10:antialias=true:autohint=true";
 /* Spare fonts */
 static char *font2[] = {
-	"FiraCode Nerd Font:size=10:antialias=true:autohint=true",
+	"Iosevka Nerd Font:size=10:antialias=true:autohint=true",
 	"Noto Color Emoji:size=10:antialias=true:autohint=true",
 	"monospace:pixelsize=10:antialias=true:autohint=true",
 };
